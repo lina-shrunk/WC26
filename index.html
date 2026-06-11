@@ -136,16 +136,49 @@
   footer{max-width:1100px;margin:18px auto 0;padding:0 16px;font-size:.68rem;color:var(--muted);line-height:1.6}
   footer a{color:var(--accent)}
 
-  /* phones: stack the bracket vertically instead of scrolling sideways */
+  /* ---------- phone layout (≤680px) ---------- */
   @media (max-width:680px){
+    body{padding-bottom:40px}
+    header{padding:14px 14px 12px}
+    h1{font-size:1.1rem}
+    .h-row{gap:10px}
+    .tz-wrap{width:100%;justify-content:space-between}
+    main{padding:0 10px}
+    nav{padding:12px 10px 0;gap:4px}
+    .tab{min-width:0;font-size:.8rem;padding:10px 4px}
+    .panel{padding:14px 11px 18px}
+    .infobar{font-size:.74rem;padding:10px 11px}
+
+    /* Schedule: compact rows that fit a phone */
+    .filters{gap:6px}
+    .filters select,.filters input,.toggle,.reset{font-size:.8rem;padding:7px 9px}
+    .filters input{min-width:0;flex:1 1 130px}
+    .match{gap:9px;padding:10px 11px}
+    .m-time{min-width:58px;gap:2px}
+    .m-time .t{font-size:1rem}
+    .m-time .ampm{font-size:.66rem}
+    .m-teams{min-width:120px}
+    .team{font-size:.88rem}
+    .team .fl{width:20px;font-size:1rem}
+    .m-meta{min-width:86px}
+    .gbadge,.ko-tag{font-size:.6rem;padding:2px 6px}
+    .city{font-size:.64rem}
+    .score-in input{width:30px}
+
+    /* Groups: one table per row, allow long names to wrap */
+    .grpgrid{grid-template-columns:1fr}
+    .grp h3{font-size:.8rem}
+    table{font-size:.74rem}
+    th,td{padding:6px 4px}
+    td.tm{white-space:normal;padding-left:8px!important;line-height:1.2}
+    td.tm .fl{width:16px;font-size:.9rem}
+
+    /* Knockout: stack the bracket vertically instead of scrolling sideways */
     .bracket{flex-direction:column;overflow-x:visible;gap:0;align-items:stretch}
     .round,.round.center{min-width:0;width:100%;margin-bottom:16px}
     .rbody,.rbody.finalbody{justify-content:flex-start;gap:8px}
     .kc-t{white-space:normal}
     .rhdr{text-align:left}
-    .grpgrid{grid-template-columns:1fr}
-    .filters{gap:6px}
-    .filters input{min-width:0;flex:1}
   }
 </style>
 </head>
@@ -174,7 +207,7 @@
   <!-- SCHEDULE -->
   <section class="panel active" id="schedule">
     <div class="infobar">
-      Kick-off times are auto-converted to your chosen city </b>.
+      Kick-off times are auto-converted to your chosen city. </b>.
     </div>
     <div class="filters">
       <select id="fGroup"><option value="">All groups</option></select>
