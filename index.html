@@ -164,6 +164,22 @@
   }
   .cal-loading { font-size: 12px; color: var(--muted); text-align: center; padding: 6px 0 2px; }
 
+  /* Comp filter */
+  .comp-filter {
+    max-width: 760px; margin: 16px auto 0; padding: 0 20px;
+    display: flex; gap: 6px; justify-content: center;
+  }
+  .comp-btn {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+    color: var(--muted); font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 6px 16px; cursor: pointer;
+  }
+  .comp-btn:hover { color: var(--text); }
+  .comp-btn:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
+  .comp-btn.active { color: var(--text); border-color: var(--pitch); background: rgba(47,191,113,0.12); }
+  .comp-btn[data-comp="Hoogies"].active { border-color: var(--gold); background: rgba(232,184,75,0.12); }
+
   /* Search */
   .search-wrap {
     max-width: 760px; margin: 16px auto 0; padding: 0 20px;
@@ -393,6 +409,34 @@
   }
   .sweep-add button:hover { border-color: var(--pitch); }
   .sweep-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  .leaderboard { margin-bottom: 16px; }
+  .leaderboard-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .lb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .lb-table th {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12px;
+    letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase;
+    text-align: right; padding: 3px 6px;
+  }
+  .lb-table th:nth-child(1), .lb-table th:nth-child(2) { text-align: left; }
+  .lb-table td {
+    padding: 7px 6px; text-align: right; font-variant-numeric: tabular-nums;
+    border-top: 1px solid rgba(31,49,66,0.6);
+  }
+  .lb-table td:nth-child(1), .lb-table td:nth-child(2) { text-align: left; }
+  .lb-rank {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    color: var(--muted); width: 30px;
+  }
+  .lb-member { font-weight: 600; }
+  .lb-pts { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; color: var(--pitch); }
+  .lb-table tr.lb-first td { background: rgba(232,184,75,0.08); }
+  .lb-table tr.lb-first .lb-member, .lb-table tr.lb-first .lb-rank { color: var(--gold); }
+  .lb-table tr.lb-last .lb-pts { color: var(--live); }
+
   .sweep-tag.hoogies { color: var(--gold); border: 1px solid rgba(232,184,75,0.45); }
   .sweep-tag.shrunk { color: var(--pitch); border: 1px solid rgba(47,191,113,0.45); }
   .sweep-tag.dud, .b-chip.dud { border-style: dashed; opacity: 0.85; }
@@ -478,6 +522,53 @@
     padding: 28px 20px; text-align: center; color: var(--muted); font-size: 14px; margin-top: 26px;
   }
   .error-box { border-color: rgba(255,70,85,0.4); color: #f1a0a8; }
+
+  /* Charter modal */
+  .charter-modal {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(4, 8, 13, 0.82);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .charter-modal[hidden] { display: none; }
+  .charter-box {
+    background: #101b26; border: 1px solid var(--line); border-radius: 12px;
+    width: min(900px, 100%); height: min(92vh, 1100px);
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+  }
+  .charter-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line);
+  }
+  .charter-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold); flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .charter-newtab { color: var(--muted); font-size: 12px; text-decoration: none; flex-shrink: 0; }
+  .charter-newtab:hover { color: var(--pitch); }
+  .charter-close {
+    background: none; border: 1px solid var(--line); border-radius: 6px;
+    color: var(--text); font-size: 14px; line-height: 1;
+    width: 30px; height: 30px; cursor: pointer; flex-shrink: 0;
+  }
+  .charter-close:hover { border-color: var(--live); color: var(--live); }
+  .charter-close:focus-visible { outline: 2px solid var(--pitch); }
+  .charter-pages {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    background: #1a242f; padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .charter-pages canvas {
+    display: block; width: 100% !important; height: auto !important;
+    margin: 0 auto 12px; border-radius: 4px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  }
+  .charter-loading {
+    color: var(--muted); text-align: center; padding: 40px 0; font-size: 14px;
+  }
 
   footer {
     max-width: 760px; margin: 36px auto 0; padding: 0 20px;
@@ -572,6 +663,12 @@
     </div>
   </div>
 
+  <div class="comp-filter" role="group" aria-label="Competition filter">
+    <button class="comp-btn" data-comp="all">All comps</button>
+    <button class="comp-btn" data-comp="Hoogies">Hoogies</button>
+    <button class="comp-btn" data-comp="Shrunk">Shrunk</button>
+  </div>
+
   <div class="search-wrap">
     <div class="member-picker">
       <button class="member-btn" id="memberBtn" aria-haspopup="listbox" aria-expanded="false">
@@ -611,6 +708,19 @@
       <div class="empty">Loading knockout draw…</div>
     </div>
   </main>
+</div>
+
+<div class="charter-modal" id="charterModal" hidden>
+  <div class="charter-box" role="dialog" aria-label="Competition Charter">
+    <div class="charter-head">
+      <span class="charter-title">Hoogies Competition Charter</span>
+      <a href="charter.pdf" target="_blank" rel="noopener" class="charter-newtab">Open in new tab</a>
+      <button class="charter-close" id="charterClose" aria-label="Close charter">&#10005;</button>
+    </div>
+    <div class="charter-pages" id="charterPages">
+      <div class="charter-loading">Loading charter&hellip;</div>
+    </div>
+  </div>
 </div>
 
 <footer>
@@ -1490,22 +1600,36 @@ function setChipLeague(league) {
   renderBracket();
   renderGroups();
 }
+/* Home-screen comp filter: All / Hoogies / Shrunk */
+let compFilter = store.get('wc26.comp', 'all');
 function activeLeagues() {
-  // Tags from both leagues show everywhere; gold = Hoogies, teal = Shrunk
-  return SWEEP_LEAGUES;
+  // Gold chips = Hoogies, teal = Shrunk
+  return SWEEP_LEAGUES.includes(compFilter) ? [compFilter] : SWEEP_LEAGUES;
 }
+function paintCompFilter() {
+  document.querySelectorAll('.comp-btn').forEach(btn =>
+    btn.classList.toggle('active',
+      btn.dataset.comp === compFilter || (btn.dataset.comp === 'all' && !SWEEP_LEAGUES.includes(compFilter))));
+}
+document.querySelectorAll('.comp-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    compFilter = btn.dataset.comp;
+    store.set('wc26.comp', compFilter);
+    paintCompFilter();
+    populateMemberFilter();
+    if (lastData) render(lastData);
+    renderCalendar();
+    renderBracket();
+  });
+});
 
 function sweepTagsFor(teamId) {
   const tags = [];
   if (!teamId) return tags;
-  const scoped = new Set(activeLeagues());
-  SWEEP_LEAGUES.forEach(league => {
+  activeLeagues().forEach(league => {
     sweeps[league].forEach(en => {
       if (en.teamId !== teamId) return;
-      const isSelectedMember = memberFilter && sameMember(en.member, memberFilter);
-      if (scoped.has(league) || isSelectedMember) {
-        tags.push({ league, member: en.member, role: en.role || 'best' });
-      }
+      tags.push({ league, member: en.member, role: en.role || 'best' });
     });
   });
   return tags;
@@ -1527,10 +1651,10 @@ function sameMember(a, b) {
 }
 
 function memberTeamIds(name) {
-  // Spans every league the member appears in (including alias names),
-  // so someone in both Hoogies and Shrunk sees all their teams at once
+  // Spans the leagues currently in play (all by default), so dual-league
+  // members see all their teams unless a single comp is selected
   const ids = new Set();
-  SWEEP_LEAGUES.forEach(league => {
+  activeLeagues().forEach(league => {
     sweeps[league].forEach(en => {
       if (sameMember(en.member, name) && en.teamId) ids.add(en.teamId);
     });
@@ -1544,9 +1668,9 @@ function memberLeagues(name) {
 }
 
 function populateMemberFilter() {
-  // Every player from every league is selectable
+  // Players from the selected comp (or all comps) are selectable
   const names = new Set();
-  SWEEP_LEAGUES.forEach(league =>
+  activeLeagues().forEach(league =>
     sweeps[league].forEach(en => names.add(en.member)));
   const sorted = [...names].sort((a, b) => a.localeCompare(b));
   if (memberFilter && !sorted.some(n => n.toLowerCase() === memberFilter.toLowerCase())) {
@@ -1810,10 +1934,39 @@ function renderSweeps(league) {
   sweepsMain.innerHTML = [currentSweepLeague].map(league => {
     const locked = LOCKED_LEAGUES.has(league);
     let entries = sweeps[league];
+    let leaderboardHtml = '';
     if (league === 'Shrunk') {
       entries = entries.slice().sort((a, b) =>
         sweepPoints(b) - sweepPoints(a) || a.member.localeCompare(b.member) ||
         (a.teamName || '').localeCompare(b.teamName || ''));
+
+      // Member leaderboard: aggregate points across each member's teams
+      const totals = {};
+      sweeps[league].forEach(en => {
+        const k = en.member;
+        totals[k] = totals[k] || { pts: 0, alive: 0, teams: 0 };
+        totals[k].pts += sweepPoints(en);
+        totals[k].teams += 1;
+        if (!(en.teamId && eliminated[en.teamId])) totals[k].alive += 1;
+      });
+      const ranked = Object.keys(totals).sort((a, b) =>
+        totals[b].pts - totals[a].pts || a.localeCompare(b));
+      leaderboardHtml = '<div class="leaderboard">' +
+        '<div class="leaderboard-title">Leaderboard</div>' +
+        '<table class="lb-table">' +
+          '<thead><tr><th>#</th><th>Member</th><th>Teams alive</th><th>Pts</th></tr></thead>' +
+          '<tbody>' + ranked.map((name, i) => {
+            const t = totals[name];
+            const cls = i === 0 ? ' class="lb-first"' : (i === ranked.length - 1 ? ' class="lb-last"' : '');
+            return '<tr' + cls + '>' +
+              '<td class="lb-rank">' + (i + 1) + '</td>' +
+              '<td class="lb-member">' + esc(name) + '</td>' +
+              '<td>' + t.alive + '/' + t.teams + '</td>' +
+              '<td class="lb-pts">' + t.pts + '</td>' +
+            '</tr>';
+          }).join('') + '</tbody>' +
+        '</table>' +
+      '</div>';
     }
     const rows = entries.map((en, i) => sweepRow(league, en, i)).join('');
     return '<div class="sweep-league">' +
@@ -1822,9 +1975,10 @@ function renderSweeps(league) {
         entries.length + (entries.length === 1 ? ' team' : ' teams') +
         (locked ? ' &middot; draw locked in' : '') + '</span>' +
         (league === 'Hoogies'
-          ? '<a href="charter.pdf" target="_blank" rel="noopener" style="margin-left:auto;color:var(--gold);font-family:Barlow,sans-serif;font-size:13px;letter-spacing:0.02em;text-transform:none;font-weight:500;text-decoration:none;border:1px solid rgba(232,184,75,0.45);border-radius:6px;padding:3px 10px">Competition Charter</a>'
+          ? '<button class="charter-btn" style="margin-left:auto;background:none;cursor:pointer;color:var(--gold);font-family:Barlow,sans-serif;font-size:13px;letter-spacing:0.02em;text-transform:none;font-weight:500;border:1px solid rgba(232,184,75,0.45);border-radius:6px;padding:3px 10px">Competition Charter</button>'
           : '') +
       '</div>' +
+      leaderboardHtml +
       (entries.length
         ? '<table class="sweep-table">' +
             '<thead><tr><th>Member</th><th>Team</th><th>Pick</th><th>GP</th><th>W</th><th>D</th><th>L</th>' +
@@ -1848,7 +2002,75 @@ function renderSweeps(league) {
   }).join('');
 }
 
+const charterModal = document.getElementById('charterModal');
+const charterPages = document.getElementById('charterPages');
+let charterRendered = false;
+let charterRendering = false;
+
+function loadPdfJs() {
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve();
+    };
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function renderCharter() {
+  if (charterRendered || charterRendering) return;
+  charterRendering = true;
+  try {
+    await loadPdfJs();
+    const pdf = await window.pdfjsLib.getDocument('charter.pdf').promise;
+    charterPages.innerHTML = '';
+    const containerWidth = charterPages.clientWidth - 24;   // minus padding
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const base = page.getViewport({ scale: 1 });
+      const scale = (containerWidth / base.width) * dpr;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      charterPages.appendChild(canvas);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    }
+    charterRendered = true;
+  } catch (err) {
+    charterPages.innerHTML = '<div class="charter-loading">Could not display the charter here. ' +
+      '<a href="charter.pdf" target="_blank" rel="noopener" style="color:var(--pitch)">Open the PDF directly</a>.</div>';
+  } finally {
+    charterRendering = false;
+  }
+}
+
+function openCharter() {
+  charterModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  renderCharter();
+}
+function closeCharter() {
+  charterModal.hidden = true;
+  document.body.style.overflow = '';
+}
+document.getElementById('charterClose').addEventListener('click', closeCharter);
+charterModal.addEventListener('click', (e) => {
+  if (e.target === charterModal) closeCharter();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !charterModal.hidden) closeCharter();
+});
+
 sweepsMain.addEventListener('click', (e) => {
+  const charter = e.target.closest('.charter-btn');
+  if (charter) { openCharter(); return; }
   const add = e.target.closest('.sweep-add-btn');
   if (add) {
     const league = add.dataset.league;
@@ -2081,6 +2303,7 @@ document.addEventListener('visibilitychange', () => {
 /* ---------- Boot ---------- */
 
 updateDateLabel();
+paintCompFilter();
 populateMemberFilter();
 loadCalendarMonth();
 loadStandings();
