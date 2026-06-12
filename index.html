@@ -773,14 +773,16 @@ const store = (() => {
 })();
 
 /* ---------- State ---------- */
+/* WC_END runs to 20 July local: the final kicks off 19 July US time, which is
+   the morning of 20 July for viewers ahead of the venues (e.g. AEST). */
 const WC_START = new Date(2026, 5, 11);
-const WC_END = new Date(2026, 6, 19);
+const WC_END = new Date(2026, 6, 20);
 function clampToTournament(d) {
   if (d < WC_START) return new Date(WC_START);
   if (d > WC_END) return new Date(WC_END);
   return d;
 }
-let selectedDate = clampToTournament(espnToday());
+let selectedDate = clampToTournament(stripTime(new Date()));
 let calMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
 if (calMonth < new Date(2026, 5, 1)) calMonth = new Date(2026, 5, 1);
 if (calMonth > new Date(2026, 6, 1)) calMonth = new Date(2026, 6, 1);
@@ -810,17 +812,15 @@ function isoDay(d) {
     String(d.getMonth() + 1).padStart(2, '0') + '-' +
     String(d.getDate()).padStart(2, '0');
 }
-/* ESPN buckets its day pages by US Eastern time. Use the same bucketing for
-   calendar dots so a dotted day always matches what ?dates= returns. */
-function espnDay(dateIso) {
-  return new Date(dateIso).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+/* Bucket games by the viewer's LOCAL date, so the calendar dots and the day
+   view match what's actually on "today" in your timezone (AEST etc.).
+   ESPN's ?dates= pages are bucketed by US Eastern, so fetches use a ±1 day
+   buffer and then filter events down to the local day. */
+function localDay(dateIso) {
+  return isoDay(new Date(dateIso));
 }
-/* The "current matchday" in ESPN's bucketing. For viewers well ahead of the
-   venues (e.g. AEST) this is usually local *yesterday* — the games still in
-   play or yet to kick off — which is what should show by default. */
-function espnToday() {
-  const [y, m, d] = espnDay(new Date().toISOString()).split('-').map(Number);
-  return new Date(y, m - 1, d);
+function localToday() {
+  return stripTime(new Date());
 }
 /* Host-city timezone map for showing the game's local (venue) time */
 const CITY_TZ = [
@@ -875,8 +875,8 @@ function stageLabel(ev) {
 
 function updateDateLabel() {
   const opts = { weekday: 'short', day: 'numeric', month: 'short' };
-  const isToday = sameDay(selectedDate, espnToday());
-  dateLabelEl.textContent = (isToday ? 'Matchday — ' : '') +
+  const isToday = sameDay(selectedDate, localToday());
+  dateLabelEl.textContent = (isToday ? 'Today — ' : '') +
     selectedDate.toLocaleDateString(undefined, opts);
   document.getElementById('todayBtn').hidden = isToday;
 }
@@ -1138,10 +1138,15 @@ async function load() {
   if (fetching) return;
   fetching = true;
   try {
-    const url = BASE_URL + '?dates=' + yyyymmdd(selectedDate);
+    /* ESPN day pages are US Eastern; fetch a ±1 day window and keep only the
+       games that fall on the selected LOCAL date. */
+    const start = new Date(selectedDate); start.setDate(start.getDate() - 1);
+    const end = new Date(selectedDate); end.setDate(end.getDate() + 1);
+    const url = BASE_URL + '?dates=' + yyyymmdd(start) + '-' + yyyymmdd(end) + '&limit=200';
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
+    data.events = (data.events || []).filter(ev => localDay(ev.date) === isoDay(selectedDate));
     detectGoals(data);
     lastData = data;
     const hasLive = render(data);
@@ -1231,16 +1236,20 @@ async function loadCalendarMonth() {
 
   calLoadingEl.hidden = false;
   try {
+    /* Fetch a day either side of the month so games landing on a local date
+       just inside the month (but on an adjacent ET page) aren't missed. */
     const first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1);
+    first.setDate(first.getDate() - 1);
     const last = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0);
-    const url = BASE_URL + '?dates=' + yyyymmdd(first) + '-' + yyyymmdd(last);
+    last.setDate(last.getDate() + 1);
+    const url = BASE_URL + '?dates=' + yyyymmdd(first) + '-' + yyyymmdd(last) + '&limit=400';
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const byDay = {};
     (data.events || []).forEach(ev => {
       if (!ev.date) return;
-      const day = espnDay(ev.date);   // matches ESPN's ?dates= day pages
+      const day = localDay(ev.date);   // the viewer's local date, not ESPN's ET pages
       const comps = ev.competitions?.[0]?.competitors || [];
       const teams = comps.map(c => {
         const t = c.team || {};
@@ -1281,7 +1290,7 @@ function renderCalendar() {
     }
   });
 
-  const today = espnToday();
+  const today = localToday();
 
   const atFirstMonth = calMonth.getFullYear() === 2026 && calMonth.getMonth() === 5;
   const atLastMonth = calMonth.getFullYear() === 2026 && calMonth.getMonth() === 6;
@@ -1756,8 +1765,8 @@ async function loadKnockouts() {
   if (elimsLoaded) { renderBracket(); return; }
   elimsLoaded = true;   // attempt once per page load
   try {
-    // Knockout rounds run 28 June – 19 July
-    const res = await fetch(BASE_URL + '?dates=20260628-20260719&limit=400');
+    // Knockout rounds run 28 June – 19 July (ET pages; +1 day buffer for safety)
+    const res = await fetch(BASE_URL + '?dates=20260628-20260720&limit=400');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     koEvents = data.events || [];
@@ -2100,7 +2109,7 @@ sweepsMain.addEventListener('click', (e) => {
 /* ---------- Controls ---------- */
 
 document.getElementById('refreshBtn').addEventListener('click', load);
-document.getElementById('todayBtn').addEventListener('click', () => selectDate(espnToday()));
+document.getElementById('todayBtn').addEventListener('click', () => selectDate(localToday()));
 document.getElementById('teamSearch').addEventListener('input', () => {
   if (lastData) render(lastData);
   renderCalendar();
