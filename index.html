@@ -250,6 +250,10 @@
   .goal-badge { font-weight: 700; color: #07130c; background: var(--pitch); }
   .teams { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .team-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .team-line {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 4px 6px; min-width: 0; flex: 1;
+  }
   .team-row img { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
   .team-name {
     font-family: 'Barlow Condensed', sans-serif;
@@ -331,7 +335,7 @@
     border-top: 1px solid rgba(31,49,66,0.6);
   }
   .group-table td:first-child { text-align: left; }
-  .group-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .group-team { display: flex; align-items: center; gap: 5px; min-width: 0; flex-wrap: wrap; row-gap: 2px; }
   .group-team img { width: 17px; height: 17px; object-fit: contain; flex-shrink: 0; }
   .group-team span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
   .group-table .pts { font-weight: 600; color: var(--text); }
@@ -787,7 +791,16 @@ function teamRowHtml(c, state) {
       (faved ? 'Unstar ' : 'Star ') + esc(t.displayName || 'team') + '">' +
       (faved ? ICON.starFilled : ICON.starOutline) + '</button>' +
     logo +
-    '<span class="team-name">' + esc(t.displayName || t.name || '?') + '</span>' +
+    '<span class="team-line">' +
+      '<span class="team-name">' + esc(t.displayName || t.name || '?') + '</span>' +
+      sweepTagsFor(t.id).map(tag => {
+        const dud = tag.role === 'dud';
+        const lbl = roleLabel(tag.league, tag.role).toLowerCase();
+        return '<span class="sweep-tag ' + tag.league.toLowerCase() + (dud ? ' dud' : '') +
+          '" title="' + esc(tag.league) + ' ' + esc(lbl) + ' pick: ' + esc(tag.member) + '">' +
+          esc(tag.member) + (dud ? ' (' + esc(lbl) + ')' : '') + '</span>';
+      }).join('') +
+    '</span>' +
     score +
   '</div>';
 }
@@ -803,19 +816,8 @@ function badgeHtml(ev) {
     text = stageLabel(ev);
   }
   const flashing = flashUntil[ev.id] && Date.now() < flashUntil[ev.id];
-  let sweepChips = '';
-  comps.forEach(c => {
-    sweepTagsFor(c.team?.id).forEach(tag => {
-      const dud = tag.role === 'dud';
-      const lbl = roleLabel(tag.league, tag.role).toLowerCase();
-      sweepChips += '<span class="sweep-tag ' + tag.league.toLowerCase() + (dud ? ' dud' : '') +
-        '" title="' + esc(tag.league) + ' ' + esc(lbl) + ' pick: ' + esc(tag.member) + '">' +
-        esc(tag.member) + (dud ? ' (' + esc(lbl) + ')' : '') + '</span>';
-    });
-  });
   return '<div class="badge-row">' +
     '<span class="stage-badge">' + esc(text) + '</span>' +
-    sweepChips +
     (flashing ? '<span class="goal-badge">GOAL</span>' : '') +
   '</div>';
 }
@@ -1486,11 +1488,11 @@ function setChipLeague(league) {
   if (lastData) render(lastData);
   renderCalendar();
   renderBracket();
+  renderGroups();
 }
 function activeLeagues() {
-  // No tags anywhere until the viewer picks their league tab —
-  // nobody sees names from a draw they're not part of
-  return chipLeague && SWEEP_LEAGUES.includes(chipLeague) ? [chipLeague] : [];
+  // Tags from both leagues show everywhere; gold = Hoogies, teal = Shrunk
+  return SWEEP_LEAGUES;
 }
 
 function sweepTagsFor(teamId) {
@@ -1585,6 +1587,7 @@ memberMenu.addEventListener('click', (e) => {
   closeMemberMenu();
   if (lastData) render(lastData);
   renderCalendar();
+  renderGroups();
 });
 document.addEventListener('click', (e) => {
   if (!memberMenu.hidden && !e.target.closest('.member-picker')) closeMemberMenu();
