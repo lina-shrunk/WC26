@@ -339,7 +339,10 @@
     font-size: 16px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
     color: var(--pitch); margin-bottom: 8px;
   }
-  .group-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .group-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  /* Fixed column widths so every group table lines up identically */
+  .group-table th:first-child, .group-table td:first-child { width: auto; }
+  .group-table th:not(:first-child), .group-table td:not(:first-child) { width: 34px; }
   .group-table th {
     font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
     font-size: 12px; letter-spacing: 0.06em; color: var(--muted);
@@ -351,9 +354,9 @@
     border-top: 1px solid rgba(31,49,66,0.6);
   }
   .group-table td:first-child { text-align: left; }
-  .group-team { display: flex; align-items: center; gap: 5px; min-width: 0; flex-wrap: wrap; row-gap: 2px; }
+  .group-team { display: flex; align-items: center; gap: 5px; min-width: 0; }
   .group-team img { width: 17px; height: 17px; object-fit: contain; flex-shrink: 0; }
-  .group-team span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+  .group-team span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .group-table .pts { font-weight: 600; color: var(--text); }
   .group-table tr.q td { background: rgba(47,191,113,0.06); }
 
@@ -1895,6 +1898,12 @@ function sweepPoints(en) {
   return w * 2 + d - l;
 }
 
+function sweepGames(en) {
+  const t = teamIndex[en.teamId];
+  if (!t) return 0;
+  return (Number(t.gp) || 0) + (koWins[en.teamId] || 0) + (koLosses[en.teamId] || 0);
+}
+
 function sweepRow(league, en, idx) {
   const t = teamIndex[en.teamId] || { name: en.teamName || en.teamId, logo: '', group: '', gp: '', w: '', d: '', l: '', pts: '' };
   const role = en.role || 'best';
@@ -1953,8 +1962,9 @@ function renderSweeps(league) {
       const totals = {};
       sweeps[league].forEach(en => {
         const k = en.member;
-        totals[k] = totals[k] || { pts: 0, alive: 0, teams: 0 };
+        totals[k] = totals[k] || { pts: 0, alive: 0, teams: 0, gp: 0 };
         totals[k].pts += sweepPoints(en);
+        totals[k].gp += sweepGames(en);
         totals[k].teams += 1;
         if (!(en.teamId && eliminated[en.teamId])) totals[k].alive += 1;
       });
@@ -1963,7 +1973,7 @@ function renderSweeps(league) {
       leaderboardHtml = '<div class="leaderboard">' +
         '<div class="leaderboard-title">Leaderboard</div>' +
         '<table class="lb-table">' +
-          '<thead><tr><th>#</th><th>Member</th><th>Teams alive</th><th>Pts</th></tr></thead>' +
+          '<thead><tr><th>#</th><th>Member</th><th>Teams alive</th><th title="Total games played by this member&rsquo;s teams">GP</th><th>Pts</th></tr></thead>' +
           '<tbody>' + ranked.map((name, i) => {
             const t = totals[name];
             const cls = i === 0 ? ' class="lb-first"' : (i === ranked.length - 1 ? ' class="lb-last"' : '');
@@ -1971,6 +1981,7 @@ function renderSweeps(league) {
               '<td class="lb-rank">' + (i + 1) + '</td>' +
               '<td class="lb-member">' + esc(name) + '</td>' +
               '<td>' + t.alive + '/' + t.teams + '</td>' +
+              '<td>' + t.gp + '</td>' +
               '<td class="lb-pts">' + t.pts + '</td>' +
             '</tr>';
           }).join('') + '</tbody>' +
