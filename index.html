@@ -663,6 +663,27 @@
     font-family: 'Barlow Condensed', sans-serif; font-size: 13px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--muted); margin-top: 10px;
   }
+  .poll-card[data-poll] { cursor: pointer; }
+  .poll-card[data-poll] .poll-opts, .poll-card[data-poll] .poll-vote { cursor: default; }
+  .poll-who-hint {
+    font-size: 12px; color: var(--pitch); margin-top: 8px; letter-spacing: 0.02em;
+  }
+  .poll-who {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .poll-who-row { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; }
+  .poll-who-team {
+    display: flex; align-items: center; gap: 6px; width: 120px; flex-shrink: 0;
+    font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .poll-who-team img { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  .poll-who-names { display: flex; flex-wrap: wrap; gap: 5px; }
+  .poll-who-chip {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 2px 8px; font-size: 12px; color: var(--muted);
+  }
+  .poll-who-empty { font-size: 13px; color: var(--muted); }
   .poll-loading { font-size: 13px; color: var(--muted); }
   .poll-closed {
     font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
@@ -2821,6 +2842,28 @@ function totalLine(v) {
   const t = Object.values(v).filter(Boolean).length;
   return '<div class="poll-total">' + t + (t === 1 ? ' vote' : ' votes') + '</div>';
 }
+/* Which polls are expanded to show who voted for what. */
+let pollExpanded = {};
+function votersByChoice(v) {
+  const m = {};
+  Object.keys(v).forEach(voter => { const c = v[voter]; if (!c) return; (m[c] = m[c] || []).push(voter); });
+  return m;
+}
+/* Per-voter breakdown: each choice with the names that picked it. */
+function whoVotedHtml(v, order, logoFn) {
+  const m = votersByChoice(v);
+  let keys = (order && order.length) ? order.filter(k => m[k]) : [];
+  Object.keys(m).forEach(k => { if (!keys.includes(k)) keys.push(k); });   // any extras
+  if (!keys.length) return '<div class="poll-who-empty">No votes yet.</div>';
+  return keys.map(k => {
+    const logo = logoFn ? logoFn(k) : '';
+    const names = m[k].slice().sort((a, b) => a.localeCompare(b));
+    return '<div class="poll-who-row">' +
+      '<span class="poll-who-team">' + (logo ? '<img src="' + esc(logo) + '" alt="" loading="lazy">' : '') + esc(k) + '</span>' +
+      '<span class="poll-who-names">' + names.map(n => '<span class="poll-who-chip">' + esc(n) + '</span>').join('') + '</span>' +
+    '</div>';
+  }).join('');
+}
 function barsHtml(tally, myChoice, logoFn) {
   const total = Object.values(tally).reduce((s, n) => s + n, 0);
   if (!total) return '<div class="poll-empty">No votes yet — be the first.</div>';
@@ -2898,12 +2941,16 @@ function renderPolls() {
             '</select><button class="poll-btn" data-poll="' + esc(CHAMPION_POLL.id) + '">' + (myChoice ? 'Change vote' : 'Vote') + '</button>' +
           '</div>'
         : '<div class="poll-loading">Loading teams…</div>');
-    html += '<div class="poll-card">' +
+    const total = Object.values(v).filter(Boolean).length;
+    const expanded = !!pollExpanded[CHAMPION_POLL.id];
+    html += '<div class="poll-card" data-poll="' + esc(CHAMPION_POLL.id) + '">' +
       '<div class="poll-q">' + esc(CHAMPION_POLL.q) + '</div>' +
       voteRow +
       (myChoice ? '<div class="poll-mychoice">Your pick: <strong>' + esc(myChoice) + '</strong></div>' : '') +
       '<div class="poll-results">' + barsHtml(pollTally(v), myChoice, nameLogo) + '</div>' +
       totalLine(v) +
+      (total ? '<div class="poll-who-hint">' + (expanded ? 'Tap to hide who voted' : 'Tap to see who voted') + '</div>' : '') +
+      (expanded ? '<div class="poll-who">' + whoVotedHtml(v, [], nameLogo) + '</div>' : '') +
     '</div>';
   }
 
@@ -2923,13 +2970,17 @@ function renderPolls() {
             '<button class="poll-opt' + (myChoice === o.value ? ' chosen' : '') + '" data-poll="' + esc(p.id) + '" data-choice="' + esc(o.value) + '">' +
               (o.logo ? '<img src="' + esc(o.logo) + '" alt="" loading="lazy">' : '') + esc(o.label) +
             '</button>').join('') + '</div>';
-      html += '<div class="poll-card">' +
+      const total = Object.values(v).filter(Boolean).length;
+      const expanded = !!pollExpanded[p.id];
+      html += '<div class="poll-card" data-poll="' + esc(p.id) + '">' +
         '<div class="poll-q">' + esc(p.title) + '</div>' +
         '<div class="poll-when">' + esc(p.when) + '</div>' +
         controls +
         (myChoice ? '<div class="poll-mychoice">Your pick: <strong>' + esc(myChoice) + '</strong></div>' : '') +
         '<div class="poll-results">' + barsHtml(pollTally(v), myChoice, logoFn) + '</div>' +
         totalLine(v) +
+        (total ? '<div class="poll-who-hint">' + (expanded ? 'Tap to hide who voted' : 'Tap to see who voted') + '</div>' : '') +
+        (expanded ? '<div class="poll-who">' + whoVotedHtml(v, p.options.map(o => o.value), logoFn) + '</div>' : '') +
       '</div>';
     });
   }
@@ -2949,18 +3000,27 @@ pollsWrapEl.addEventListener('click', (e) => {
     return;
   }
   const btn = e.target.closest('.poll-btn');
-  if (!btn) return;
-  const poll = btn.dataset.poll;
-  if (poll === 'champion' && finalLocked()) return;   // voting closed at the final
-  const vi = document.getElementById('voterInput');
-  const voter = (vi ? vi.value.trim() : voterName);
-  if (!voter) { if (vi) vi.focus(); return; }
-  voterName = voter;
-  store.set('wc26.voterName', voterName);
-  const sel = pollsWrapEl.querySelector('.poll-pick[data-poll="' + poll + '"]');
-  const choice = sel ? sel.value : '';
-  if (!choice) { if (sel) sel.focus(); return; }
-  castVote(poll, voter, choice);
+  if (btn) {
+    const poll = btn.dataset.poll;
+    if (poll === 'champion' && finalLocked()) return;   // voting closed at the final
+    const vi = document.getElementById('voterInput');
+    const voter = (vi ? vi.value.trim() : voterName);
+    if (!voter) { if (vi) vi.focus(); return; }
+    voterName = voter;
+    store.set('wc26.voterName', voterName);
+    const sel = pollsWrapEl.querySelector('.poll-pick[data-poll="' + poll + '"]');
+    const choice = sel ? sel.value : '';
+    if (!choice) { if (sel) sel.focus(); return; }
+    castVote(poll, voter, choice);
+    return;
+  }
+  // Tapping a card (but not its vote controls) toggles the who-voted breakdown
+  const card = e.target.closest('.poll-card');
+  if (card && card.dataset.poll && !e.target.closest('select, button, .poll-vote, .poll-opts')) {
+    const id = card.dataset.poll;
+    pollExpanded[id] = !pollExpanded[id];
+    renderPolls();
+  }
 });
 pollsWrapEl.addEventListener('change', (e) => {
   const vi = e.target.closest('#voterInput');
