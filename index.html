@@ -358,6 +358,10 @@
   .group-team img { width: 17px; height: 17px; object-fit: contain; flex-shrink: 0; }
   .group-team span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .group-table .pts { font-weight: 600; color: var(--text); }
+  .team-rank {
+    font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
+    margin-left: 5px; opacity: 0.85; font-weight: 600;
+  }
   .group-table tr.q td { background: rgba(47,191,113,0.06); }
 
   /* Sweeps */
@@ -520,6 +524,170 @@
     .bracket { gap: 5px; }
   }
 
+  /* Awards */
+  .awards-intro { font-size: 13px; color: var(--muted); margin-top: 18px; line-height: 1.5; }
+  .awards-intro strong { color: var(--text); font-weight: 600; }
+  .awards-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px; margin-top: 14px;
+  }
+  .aw-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 13px 15px; backdrop-filter: blur(2px);
+  }
+  .aw-card.won { border-color: rgba(232,184,75,0.5); }
+  .aw-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+  .aw-title {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold);
+  }
+  .aw-badge {
+    margin-left: auto; font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #07130c; background: var(--gold); border-radius: 4px; padding: 1px 7px;
+  }
+  .aw-badge.prelim { color: var(--pitch); background: none; border: 1px solid rgba(47,191,113,0.55); }
+  .aw-prelim-note {
+    font-family: 'Barlow', sans-serif; font-size: 12px; color: var(--pitch);
+    margin: -2px 0 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .aw-prelim-note::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--pitch); flex-shrink: 0; animation: pulse 1.6s ease-in-out infinite;
+  }
+  .aw-flag {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+    border: 1px dashed var(--line); border-radius: 4px; padding: 1px 6px;
+  }
+  .aw-rule { font-size: 13px; color: var(--muted); line-height: 1.4; margin-bottom: 8px; }
+  .aw-detail { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+  .aw-status {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 0.06em; color: var(--muted);
+  }
+  .aw-status.scanning { color: var(--pitch); }
+  .aw-team { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .aw-team-name { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; }
+  .aw-chip {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.04em; color: var(--gold);
+    border: 1px solid rgba(232,184,75,0.45); border-radius: 4px; padding: 1px 7px;
+  }
+  .aw-chip.dud { border-style: dashed; opacity: 0.9; }
+  .aw-chip.lost { color: var(--muted); border-color: var(--line); opacity: 0.7; text-decoration: line-through; }
+  .aw-none { font-size: 12px; color: var(--muted); }
+
+  /* Final-score prediction panel */
+  .pred-panel {
+    background: var(--panel); border: 1px solid rgba(232,184,75,0.4); border-radius: 10px;
+    padding: 13px 15px; margin-top: 14px;
+  }
+  .pred-title {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px;
+  }
+  .pred-sub { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 11px; }
+  .pred-actual {
+    font-size: 13px; color: var(--text); margin-bottom: 11px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .pred-auto { color: var(--muted); font-size: 12px; }
+  .pred-list { display: flex; flex-direction: column; gap: 7px; }
+  .pred-row { display: flex; align-items: center; gap: 6px; font-size: 13px; flex-wrap: wrap; }
+  .pred-name { min-width: 130px; font-weight: 600; }
+  .pred-team { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .pred-correct { color: var(--pitch); font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12px; }
+  .pred-in {
+    width: 44px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+    color: var(--text); font-family: inherit; font-size: 14px; padding: 5px 6px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .pred-in:focus { outline: none; border-color: var(--pitch); }
+
+  /* Polls */
+  .poll-voter {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-top: 20px; font-size: 14px; color: var(--muted);
+  }
+  .poll-name {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px;
+    color: var(--text); font-family: inherit; font-size: 14px; padding: 7px 11px; min-width: 150px;
+  }
+  .poll-name:focus { outline: none; border-color: var(--pitch); }
+  .poll-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; margin-top: 14px; backdrop-filter: blur(2px);
+  }
+  .poll-q {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 700;
+    letter-spacing: 0.04em; color: var(--text); margin-bottom: 12px;
+  }
+  .poll-vote { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .poll-pick {
+    flex: 1; min-width: 160px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 7px; color: var(--text); font-family: inherit; font-size: 14px; padding: 8px 10px;
+  }
+  .poll-pick:focus { outline: none; border-color: var(--pitch); }
+  .poll-btn {
+    background: rgba(47,191,113,0.14); border: 1px solid var(--pitch); color: var(--pitch);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 18px; border-radius: 7px; cursor: pointer;
+  }
+  .poll-btn:hover { background: rgba(47,191,113,0.24); }
+  .poll-btn:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
+  .poll-mychoice { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .poll-mychoice strong { color: var(--pitch); }
+  .poll-results { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .poll-bar-row { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+  .poll-bar-team {
+    display: flex; align-items: center; gap: 6px; width: 130px; flex-shrink: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .poll-bar-team img { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  .poll-bar-track {
+    flex: 1; height: 16px; background: var(--panel-2); border-radius: 4px; overflow: hidden; min-width: 40px;
+  }
+  .poll-bar-fill {
+    display: block; height: 100%; background: linear-gradient(90deg, rgba(47,191,113,0.55), var(--pitch));
+    border-radius: 4px; transition: width 0.4s ease;
+  }
+  .poll-bar-row.mine .poll-bar-fill { background: linear-gradient(90deg, rgba(232,184,75,0.55), var(--gold)); }
+  .poll-bar-row.mine .poll-bar-team { color: var(--gold); font-weight: 600; }
+  .poll-bar-n {
+    width: 74px; text-align: right; flex-shrink: 0; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .poll-empty { font-size: 13px; color: var(--muted); padding: 6px 0; }
+  .poll-total {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-top: 10px;
+  }
+  .poll-loading { font-size: 13px; color: var(--muted); }
+  .poll-closed {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 0.04em; color: var(--live); margin-bottom: 8px;
+    border: 1px solid rgba(255,70,85,0.4); border-radius: 7px; padding: 7px 11px;
+    display: inline-block;
+  }
+  .poll-section {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+    margin: 26px 0 4px;
+  }
+  .poll-when { font-size: 12px; color: var(--muted); margin: -6px 0 10px; }
+  .poll-opts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .poll-opt {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600;
+    letter-spacing: 0.02em; padding: 8px 13px; cursor: pointer;
+  }
+  .poll-opt img { width: 20px; height: 20px; object-fit: contain; }
+  .poll-opt:hover { border-color: var(--pitch); }
+  .poll-opt:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
+  .poll-opt.chosen { border-color: var(--gold); background: rgba(232,184,75,0.14); color: var(--gold); }
+
   .empty, .error-box {
     background: var(--panel); border: 1px dashed var(--line); border-radius: 10px;
     padding: 28px 20px; text-align: center; color: var(--muted); font-size: 14px; margin-top: 26px;
@@ -641,6 +809,8 @@
   <span class="tab-break" aria-hidden="true"></span>
   <button class="tab-btn" id="tabHoogies">Hoogies</button>
   <button class="tab-btn" id="tabShrunk">Shrunk</button>
+  <button class="tab-btn" id="tabAwards">Awards</button>
+  <button class="tab-btn" id="tabPolls">Polls</button>
 </div>
 
 <div id="matchesView">
@@ -713,6 +883,19 @@
   </main>
 </div>
 
+<div id="awardsView" class="hidden-view">
+  <main>
+    <div id="predPanel"></div>
+    <div class="awards-grid" id="awardsWrap"><div class="empty">Loading awards…</div></div>
+  </main>
+</div>
+
+<div id="pollsView" class="hidden-view">
+  <main>
+    <div id="pollsWrap"><div class="empty">Loading polls…</div></div>
+  </main>
+</div>
+
 <div class="charter-modal" id="charterModal" hidden>
   <div class="charter-box" role="dialog" aria-label="Competition Charter">
     <div class="charter-head">
@@ -738,6 +921,11 @@
 const BASE_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
 const SUMMARY_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=';
 const STANDINGS_URL = 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?season=2026';
+
+/* Optional: paste your Google Apps Script web-app URL here to share the final
+   score predictions across everyone via a Google Sheet. Leave it as '' to keep
+   predictions on this device only (localStorage). */
+const PREDICTIONS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxHyD4qLqQ0h_-0KGE9mt7qp9EhrhENab1rhgAcACxmC0YmZAKJJLqmt7vebVck-Yq_/exec';
 
 const content = document.getElementById('content');
 const lastUpdatedEl = document.getElementById('lastUpdated');
@@ -906,6 +1094,7 @@ function teamRowHtml(c, state) {
     logo +
     '<span class="team-line">' +
       '<span class="team-name">' + esc(t.displayName || t.name || '?') + '</span>' +
+      rankBadge(t.id) +
       sweepTagsFor(t.id).map(tag => {
         const dud = tag.role === 'dud';
         const lbl = roleLabel(tag.league, tag.role).toLowerCase();
@@ -1075,14 +1264,21 @@ async function loadDetails(eventId) {
     const rows = events
       .filter(e => {
         const t = (e.type?.text || '').toLowerCase();
-        return t.includes('goal') || t.includes('card') || t.includes('penalty');
+        return e.scoringPlay === true || e.redCard === true || e.yellowCard === true ||
+          t.includes('goal') || t.includes('card') || t.includes('penalty');
       })
       .map(e => {
         const t = (e.type?.text || '').toLowerCase();
-        let icon = ICON.ball;                                          // goal
-        if (t.includes('yellow')) icon = '<span class="card-yellow"></span>';
-        else if (t.includes('red')) icon = '<span class="card-red"></span>';
-        else if (t.includes('own')) icon = ICON.ball + ' <span style="color:var(--muted);font-size:11px">OG</span>';
+        const own = t.includes('own');
+        // A scoring play is a goal even if other text is present; only treat as a
+        // card when ESPN's card flag (or unambiguous card text) says so.
+        const isGoal = e.scoringPlay === true || (e.scoringPlay == null && t.includes('goal'));
+        const isRed = !isGoal && (e.redCard === true || (e.redCard == null && t.includes('red')));
+        const isYellow = !isGoal && !isRed && (e.yellowCard === true || t.includes('yellow') || t.includes('card'));
+        let icon = ICON.ball;                                          // goal (default)
+        if (isGoal) icon = own ? ICON.ball + ' <span style="color:var(--muted);font-size:11px">OG</span>' : ICON.ball;
+        else if (isRed) icon = '<span class="card-red"></span>';
+        else if (isYellow) icon = '<span class="card-yellow"></span>';
         const who = (e.participants || []).map(p => p.athlete?.displayName).filter(Boolean).join(', ');
         const clock = e.clock?.displayValue || '';
         const teamAbbr = e.team?.abbreviation || e.team?.displayName || '';
@@ -1354,16 +1550,21 @@ const tabGroups = document.getElementById('tabGroups');
 const tabBracket = document.getElementById('tabBracket');
 const tabHoogies = document.getElementById('tabHoogies');
 const tabShrunk = document.getElementById('tabShrunk');
+const tabAwards = document.getElementById('tabAwards');
+const tabPolls = document.getElementById('tabPolls');
 const matchesView = document.getElementById('matchesView');
 const groupsView = document.getElementById('groupsView');
 const bracketView = document.getElementById('bracketView');
 const sweepsView = document.getElementById('sweepsView');
+const awardsView = document.getElementById('awardsView');
+const pollsView = document.getElementById('pollsView');
 const groupsGrid = document.getElementById('groupsGrid');
 
 function setTab(which) {
   const map = { matches: [tabMatches, matchesView], groups: [tabGroups, groupsView],
     bracket: [tabBracket, bracketView], Hoogies: [tabHoogies, sweepsView],
-    Shrunk: [tabShrunk, sweepsView] };
+    Shrunk: [tabShrunk, sweepsView], Awards: [tabAwards, awardsView],
+    Polls: [tabPolls, pollsView] };
   Object.keys(map).forEach(k => {
     map[k][0].classList.toggle('active', k === which);
   });
@@ -1371,6 +1572,8 @@ function setTab(which) {
   groupsView.classList.toggle('hidden-view', which !== 'groups');
   bracketView.classList.toggle('hidden-view', which !== 'bracket');
   sweepsView.classList.toggle('hidden-view', which !== 'Hoogies' && which !== 'Shrunk');
+  awardsView.classList.toggle('hidden-view', which !== 'Awards');
+  pollsView.classList.toggle('hidden-view', which !== 'Polls');
   if (which === 'groups' && !standingsData) loadStandings();
   if (which === 'Hoogies' || which === 'Shrunk') {
     setChipLeague(which);
@@ -1378,12 +1581,24 @@ function setTab(which) {
     loadKnockouts();
   }
   if (which === 'bracket') loadKnockouts();
+  if (which === 'Awards') {
+    if (!standingsData) loadStandings();
+    loadAwards();
+  }
+  if (which === 'Polls') {
+    if (!standingsData) loadStandings();
+    renderPolls();
+    loadVotes();
+    loadFixtures().then(() => renderPolls());
+  }
 }
 tabMatches.addEventListener('click', () => setTab('matches'));
 tabGroups.addEventListener('click', () => setTab('groups'));
 tabBracket.addEventListener('click', () => setTab('bracket'));
 tabHoogies.addEventListener('click', () => setTab('Hoogies'));
 tabShrunk.addEventListener('click', () => setTab('Shrunk'));
+tabAwards.addEventListener('click', () => setTab('Awards'));
+tabPolls.addEventListener('click', () => setTab('Polls'));
 
 function statVal(entry, names) {
   const stats = entry.stats || [];
@@ -1394,6 +1609,22 @@ function statVal(entry, names) {
   }
   return '';
 }
+function statNum(entry, names) {
+  const v = parseFloat(statVal(entry, names));
+  return isNaN(v) ? null : v;
+}
+/* Sort a group's entries into ladder order (1st to last). Prefers ESPN's own
+   rank if present, else points, then goal difference, goals for, then wins. */
+function ladderSort(entries) {
+  return entries.slice().sort((a, b) => {
+    const ra = statNum(a, ['rank']), rb = statNum(b, ['rank']);
+    if (ra != null && rb != null && ra !== rb) return ra - rb;
+    return ((statNum(b, ['points', 'PTS', 'P']) ?? -99) - (statNum(a, ['points', 'PTS', 'P']) ?? -99)) ||
+           ((statNum(b, ['pointDifferential', 'GD']) ?? -99) - (statNum(a, ['pointDifferential', 'GD']) ?? -99)) ||
+           ((statNum(b, ['pointsFor', 'GF', 'goalsFor']) ?? -99) - (statNum(a, ['pointsFor', 'GF', 'goalsFor']) ?? -99)) ||
+           ((statNum(b, ['wins', 'W']) ?? -99) - (statNum(a, ['wins', 'W']) ?? -99));
+  });
+}
 
 function renderGroups() {
   if (!standingsData) return;
@@ -1403,7 +1634,7 @@ function renderGroups() {
     return;
   }
   groupsGrid.innerHTML = groups.map(g => {
-    const entries = (g.standings?.entries || []);
+    const entries = ladderSort(g.standings?.entries || []);
     const rows = entries.map((en, i) => {
       const t = en.team || {};
       const faved = favourites[t.id] ? ' style="color:var(--gold)"' : '';
@@ -1411,6 +1642,7 @@ function renderGroups() {
         '<td><span class="group-team">' +
           (t.logos?.[0]?.href ? '<img src="' + esc(t.logos[0].href) + '" alt="" loading="lazy">' : '') +
           '<span' + faved + '>' + esc(t.displayName || t.name || '?') + '</span>' +
+          rankBadge(t.id) +
         '</span></td>' +
         '<td>' + esc(statVal(en, ['gamesPlayed', 'GP'])) + '</td>' +
         '<td>' + esc(statVal(en, ['wins', 'W'])) + '</td>' +
@@ -1448,6 +1680,8 @@ async function loadStandings() {
     populateMemberFilter();
     renderSweeps();
     if (lastData) render(lastData);   // refresh badges with group letters
+    if (awardsEvents) { renderAwards(); renderFinalPredictions(); }  // ranks/holders resolve once the team index exists
+    renderPolls();   // team dropdown/logos become available
   } catch (err) {
     groupsGrid.innerHTML = '<div class="error-box">Could not load standings (' + esc(err.message) + ').</div>';
   }
@@ -1594,6 +1828,9 @@ function buildTeamIndex() {
         w: statVal(en, ['wins', 'W']),
         d: statVal(en, ['ties', 'D']),
         l: statVal(en, ['losses', 'L']),
+        gf: statVal(en, ['pointsFor', 'goalsFor', 'GF']),
+        ga: statVal(en, ['pointsAgainst', 'goalsAgainst', 'GA']),
+        gd: statVal(en, ['pointDifferential', 'GD']),
         pts: statVal(en, ['points', 'PTS', 'P'])
       };
     });
@@ -2319,6 +2556,853 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 })();
+
+/* ---------- Hoogies Awards ---------- */
+/* Calculations follow the Competition Charter award rules.
+   Six awards are computed live from the ESPN feed. Where a winning team is a
+   "Shared Team" (held by two registrants), the charter tie-breaks decide who
+   collects:
+     - Winner / Losing Finalist: by the registrants' final-score predictions
+       (entered off-app), so both are shown until that is resolved.
+     - All others: by the registrant's SECOND team's performance up to the day
+       the prize is conferred — most positive goal difference, then most goals
+       scored, then lowest per-capita greenhouse emissions. */
+
+/* Actual FIFA Men's World Ranking positions as at 1 April 2026 (the date the
+   charter pins for the Punchin' Award). The upset "scale" is the gap between
+   these positions. Keyed to ESPN team ids via the draws' alias logic. */
+const FIFA_RANK_2026 = {
+  'France': 1, 'Spain': 2, 'Argentina': 3, 'England': 4, 'Portugal': 5, 'Brazil': 6,
+  'Netherlands': 7, 'Morocco': 8, 'Belgium': 9, 'Germany': 10, 'Croatia': 11,
+  'Colombia': 13, 'Senegal': 14, 'Mexico': 15, 'USA': 16, 'Uruguay': 17, 'Japan': 18,
+  'Switzerland': 19, 'Iran': 21, 'Türkiye': 22, 'Ecuador': 23, 'Austria': 24,
+  'South Korea': 25, 'Australia': 27, 'Algeria': 28, 'Egypt': 29, 'Canada': 30,
+  'Norway': 31, 'Panama': 33, 'Ivory Coast': 34, 'Sweden': 38, 'Paraguay': 40,
+  'Czechia': 41, 'Scotland': 43, 'Tunisia': 44, 'DR Congo': 46, 'Uzbekistan': 50,
+  'Qatar': 55, 'Iraq': 57, 'South Africa': 60, 'Saudi Arabia': 61, 'Jordan': 63,
+  'Bosnia and Herzegovina': 65, 'Cape Verde': 69, 'Ghana': 74, 'Curaçao': 82,
+  'Haiti': 83, 'New Zealand': 85
+};
+let FIFA_RANK_BY_ID = null;
+function buildRankIndex() {
+  FIFA_RANK_BY_ID = {};
+  Object.keys(FIFA_RANK_2026).forEach(n => { const id = resolveTeamId(n); if (id) FIFA_RANK_BY_ID[id] = FIFA_RANK_2026[n]; });
+}
+function rankOf(teamId) {
+  if ((!FIFA_RANK_BY_ID || !Object.keys(FIFA_RANK_BY_ID).length) &&
+      Object.keys(teamIndex).length) buildRankIndex();
+  return (FIFA_RANK_BY_ID && FIFA_RANK_BY_ID[teamId]) || 999;
+}
+/* Small "#N" world-ranking badge; empty when the rank is unknown. */
+function rankBadge(teamId) {
+  const r = rankOf(teamId);
+  return r && r < 999 ? '<span class="team-rank" title="FIFA world ranking">#' + r + '</span>' : '';
+}
+
+/* Per-capita greenhouse emissions (t CO2e), approx., Our World in Data — the
+   charter's final Shared Team tie-break (lowest wins). Keyed by team id. */
+/* Per-capita greenhouse-gas emissions, tonnes CO2e/person, 2024, incl. land use.
+   Source: Jones et al. (2025) via Our World in Data — the series the charter cites
+   (ourworldindata.org/grapher/per-capita-ghg-emissions). England and Scotland use
+   the United Kingdom figure (OWID reports the UK, not the home nations). */
+const GHG_CANON = {
+  'France': 5.34, 'Spain': 5.74, 'Argentina': 9.12, 'England': 5.64, 'Portugal': 5.20, 'Brazil': 13.23,
+  'Netherlands': 8.07, 'Morocco': 2.67, 'Belgium': 9.20, 'Germany': 7.80, 'Croatia': 5.79,
+  'Colombia': 4.70, 'Senegal': 1.91, 'Mexico': 4.86, 'USA': 17.53, 'Uruguay': 12.71, 'Japan': 8.14,
+  'Switzerland': 4.50, 'Iran': 11.05, 'Türkiye': 7.77, 'Ecuador': 3.48, 'Austria': 7.48,
+  'South Korea': 12.19, 'Australia': 22.83, 'Algeria': 5.90, 'Egypt': 2.85, 'Canada': 20.20,
+  'Norway': 10.08, 'Panama': 4.68, 'Ivory Coast': 4.41, 'Sweden': 5.37, 'Paraguay': 9.55,
+  'Czechia': 7.87, 'Scotland': 5.64, 'Tunisia': 3.55, 'DR Congo': 6.23, 'Uzbekistan': 5.72,
+  'Qatar': 48.95, 'Iraq': 8.65, 'South Africa': 8.48, 'Saudi Arabia': 24.20, 'Jordan': 2.69,
+  'Bosnia and Herzegovina': 8.37, 'Cape Verde': 1.61, 'Ghana': 1.51, 'Curaçao': 8.00,
+  'Haiti': 1.01, 'New Zealand': 15.71
+};
+let GHG_BY_ID = null;
+function buildGhg() {
+  GHG_BY_ID = {};
+  Object.keys(GHG_CANON).forEach(n => { const id = resolveTeamId(n); if (id) GHG_BY_ID[id] = GHG_CANON[n]; });
+}
+function ghgOf(teamId) {
+  if ((!GHG_BY_ID || !Object.keys(GHG_BY_ID).length) && Object.keys(teamIndex).length) buildGhg();
+  return GHG_BY_ID ? (GHG_BY_ID[teamId] ?? null) : null;
+}
+
+let awardsEvents = null;
+let dohResult = null;
+const summaryScan = { running: false, done: false };
+
+function hoogiesHolders(teamId) {
+  if (!teamId) return [];
+  return sweeps.Hoogies.filter(en => en.teamId === teamId)
+    .map(en => ({ member: en.member, role: en.role || 'best' }));
+}
+function secondTeamId(member, awardedTeamId) {
+  const e = sweeps.Hoogies.find(x => x.member === member && x.teamId && x.teamId !== awardedTeamId);
+  return e ? e.teamId : null;
+}
+
+function fmtDay(iso) { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); }
+function num(v) { const n = Number(v); return isNaN(n) ? null : n; }
+
+function awardsCompleted() {
+  return (awardsEvents || [])
+    .filter(ev => ev.competitions?.[0]?.status?.type?.state === 'post')
+    .map(ev => {
+      const comp = ev.competitions[0];
+      const cs = comp.competitors || [];
+      const h = cs.find(c => c.homeAway === 'home') || cs[0];
+      const a = cs.find(c => c.homeAway === 'away') || cs[1];
+      if (!h || !a) return null;
+      const hs = Number(h.score), as = Number(a.score);
+      const winner = h.winner ? h : (a.winner ? a : null);
+      const loser = h.winner ? a : (a.winner ? h : null);
+      return {
+        id: ev.id, date: ev.date, slug: ev.season?.slug || '',
+        h, a, hs, as, margin: Math.abs(hs - as), winner, loser,
+        winnerGoals: winner ? (winner === h ? hs : as) : null,
+        loserGoals: loser ? (loser === h ? hs : as) : null,
+        label: (h.team?.displayName || '?') + ' ' + (isNaN(hs) ? '' : hs) + '\u2013' +
+               (isNaN(as) ? '' : as) + ' ' + (a.team?.displayName || '?')
+      };
+    })
+    .filter(Boolean)
+    .sort((x, y) => new Date(x.date) - new Date(y.date) || (x.id > y.id ? 1 : -1));
+}
+
+/* Cumulative goals for/against per team up to (and including) a given day —
+   used for the Shared Team second-team tie-break. */
+function teamCumulativeUpTo(dateIso) {
+  const lim = new Date(dateIso).getTime();
+  const stats = {};
+  awardsCompleted().forEach(m => {
+    if (new Date(m.date).getTime() > lim) return;
+    const hid = m.h.team?.id, aid = m.a.team?.id;
+    if (hid) { stats[hid] = stats[hid] || { gf: 0, ga: 0 }; stats[hid].gf += m.hs; stats[hid].ga += m.as; }
+    if (aid) { stats[aid] = stats[aid] || { gf: 0, ga: 0 }; stats[aid].gf += m.as; stats[aid].ga += m.hs; }
+  });
+  return stats;
+}
+
+/* Total per-capita GHG across all the teams a registrant holds. The charter's
+   final tie-break: when two registrants are level, the one whose countries carry
+   the HIGHEST combined emissions is eliminated (lowest wins). */
+function memberTeamsGhgTotal(member) {
+  const ids = [...new Set(sweeps.Hoogies.filter(e => e.member === member).map(e => e.teamId))];
+  let sum = 0, any = false;
+  ids.forEach(id => { const g = ghgOf(id); if (g != null) { sum += g; any = true; } });
+  return any ? Math.round(sum * 100) / 100 : null;
+}
+
+/* Resolve which registrant(s) collect for a winning team, applying the
+   Shared Team tie-break. Returns [{member, role, won, note}]. */
+function resolveAward(teamId, key, conferDate) {
+  const holders = hoogiesHolders(teamId);
+  if (holders.length <= 1) return holders.map(h => ({ member: h.member, role: h.role, won: true }));
+
+  if (key === 'winner' || key === 'finalist') {
+    return holders.map(h => ({ member: h.member, role: h.role, won: true,
+      note: 'Shared Team — decided by final-score prediction' }));
+  }
+
+  const cum = teamCumulativeUpTo(conferDate || new Date().toISOString());
+  const scored = holders.map(h => {
+    const other = secondTeamId(h.member, teamId);
+    const s = other ? cum[other] : null;
+    return {
+      member: h.member, role: h.role, other,
+      otherName: other ? (teamIndex[other]?.name || '') : '',
+      gd: s ? (s.gf - s.ga) : null,
+      gf: s ? s.gf : null,
+      total: memberTeamsGhgTotal(h.member)   // emissions tie-break: highest is eliminated
+    };
+  });
+  const ranked = scored.slice().sort((a, b) =>
+    ((b.gd ?? -99) - (a.gd ?? -99)) ||
+    ((b.gf ?? -99) - (a.gf ?? -99)) ||
+    ((a.total ?? Infinity) - (b.total ?? Infinity)));   // lowest combined emissions wins
+  const top = ranked[0];
+  const fullTie = ranked.length > 1 &&
+    ranked[0].gd === ranked[1].gd && ranked[0].gf === ranked[1].gf && ranked[0].total === ranked[1].total;
+  return scored.map(h => ({
+    member: h.member, role: h.role,
+    won: fullTie ? true : (h.member === top.member),
+    note: 'Shared — 2nd team ' + (h.otherName || '?') + ': GD ' +
+      (h.gd ?? '?') + ', GF ' + (h.gf ?? '?') +
+      (h.total != null ? ', teams\u2019 emissions ' + h.total.toFixed(2) + 't' : '')
+  }));
+}
+function withResolved(groups, key) {
+  return groups.map(g => ({
+    teamId: g.teamId, teamName: teamIndex[g.teamId]?.name || (g.teamName || ''),
+    regs: resolveAward(g.teamId, key, g.date)
+  }));
+}
+
+/* ----- Final-score predictions (Winner & Losing Finalist Shared Teams) ----- */
+let finalPreds = store.get('wc26.finalPreds', { actualH: null, actualA: null, preds: {} });
+if (!finalPreds || typeof finalPreds !== 'object') finalPreds = { actualH: null, actualA: null, preds: {} };
+if (!finalPreds.preds) finalPreds.preds = {};
+function saveFinalPreds() { store.set('wc26.finalPreds', finalPreds); }
+
+/* Sync predictions through a Google Sheet (Apps Script web app), if configured.
+   Reads replace the local model; writes are fire-and-forget with a localStorage
+   cache so the page still works offline or without a sheet. */
+async function loadPredictions() {
+  if (!PREDICTIONS_WEBAPP_URL) return;
+  try {
+    const res = await fetch(PREDICTIONS_WEBAPP_URL + (PREDICTIONS_WEBAPP_URL.includes('?') ? '&' : '?') + 'action=get', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data && typeof data === 'object') {
+      finalPreds = { actualH: data.actualH ?? null, actualA: data.actualA ?? null, preds: data.preds || {} };
+      saveFinalPreds();
+      renderFinalPredictions();
+      renderAwards();
+    }
+  } catch (e) { /* keep the localStorage copy */ }
+}
+async function pushPrediction(payload) {
+  if (!PREDICTIONS_WEBAPP_URL) return;
+  try {
+    // text/plain keeps it a "simple" request (no CORS preflight that Apps Script can't answer)
+    await fetch(PREDICTIONS_WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) { /* offline — the localStorage copy holds it until next sync */ }
+}
+
+/* ----- Polls — overall winner + per-game "who wins?", stored in the Sheet ----- */
+const CHAMPION_POLL = { id: 'champion', q: 'Who will win the World Cup 2026?' };
+const POLL_GAME_LIMIT = 16;   // how many upcoming fixtures to open polls for
+let votes = store.get('wc26.votes', {});            // { pollId: { voter: choice } }
+let voterName = store.get('wc26.voterName', '');
+if (!votes || typeof votes !== 'object') votes = {};
+
+function teamNameList() {
+  const ids = Object.keys(teamIndex);
+  if (!ids.length) return [];   // wait for standings so names are canonical
+  return ids.map(id => ({ name: teamIndex[id].name, logo: teamIndex[id].logo }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+function nameLogo(name) {
+  const id = Object.keys(teamIndex).find(k => teamIndex[k].name === name);
+  return id ? teamIndex[id].logo : '';
+}
+
+async function loadVotes() {
+  if (!PREDICTIONS_WEBAPP_URL) return;
+  try {
+    const res = await fetch(PREDICTIONS_WEBAPP_URL + (PREDICTIONS_WEBAPP_URL.includes('?') ? '&' : '?') + 'action=votes', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data && typeof data === 'object') {
+      votes = data.votes || data;
+      store.set('wc26.votes', votes);
+      renderPolls();
+    }
+  } catch (e) { /* keep the localStorage copy */ }
+}
+function castVote(poll, voter, choice) {
+  votes[poll] = votes[poll] || {};
+  votes[poll][voter] = choice;
+  store.set('wc26.votes', votes);
+  pushPrediction({ type: 'vote', poll: poll, voter: voter, choice: choice });
+  renderPolls();
+}
+
+function pollTally(v) {
+  const t = {};
+  Object.values(v).forEach(c => { if (c) t[c] = (t[c] || 0) + 1; });
+  return t;
+}
+function totalLine(v) {
+  const t = Object.values(v).filter(Boolean).length;
+  return '<div class="poll-total">' + t + (t === 1 ? ' vote' : ' votes') + '</div>';
+}
+function barsHtml(tally, myChoice, logoFn) {
+  const total = Object.values(tally).reduce((s, n) => s + n, 0);
+  if (!total) return '<div class="poll-empty">No votes yet — be the first.</div>';
+  const max = Math.max(1, ...Object.values(tally));
+  return Object.keys(tally).sort((a, b) => tally[b] - tally[a] || a.localeCompare(b)).map(name => {
+    const n = tally[name], pct = Math.round(n / total * 100), w = Math.round(n / max * 100);
+    const logo = logoFn ? logoFn(name) : '';
+    return '<div class="poll-bar-row' + (name === myChoice ? ' mine' : '') + '">' +
+      '<span class="poll-bar-team">' + (logo ? '<img src="' + esc(logo) + '" alt="" loading="lazy">' : '') + esc(name) + '</span>' +
+      '<span class="poll-bar-track"><span class="poll-bar-fill" style="width:' + w + '%"></span></span>' +
+      '<span class="poll-bar-n">' + n + ' (' + pct + '%)</span>' +
+    '</div>';
+  }).join('');
+}
+
+/* Upcoming (and in-progress) fixtures become "who wins this game?" polls */
+function gamePolls() {
+  return (awardsEvents || []).filter(e => {
+    const st = e.competitions?.[0]?.status?.type?.state;
+    const cs = e.competitions?.[0]?.competitors || [];
+    const h = cs.find(c => c.homeAway === 'home') || cs[0];
+    const a = cs.find(c => c.homeAway === 'away') || cs[1];
+    return (st === 'pre' || st === 'in') && h?.team?.id && a?.team?.id;
+  }).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, POLL_GAME_LIMIT)
+  .map(ev => {
+    const comp = ev.competitions[0];
+    const cs = comp.competitors;
+    const h = cs.find(c => c.homeAway === 'home') || cs[0];
+    const a = cs.find(c => c.homeAway === 'away') || cs[1];
+    const state = comp.status?.type?.state;
+    const ko = (ev.season?.slug || '') !== 'group-stage';
+    const opts = [{ value: h.team.displayName, label: h.team.shortDisplayName || h.team.displayName, logo: h.team.logo || '' }];
+    if (!ko) opts.push({ value: 'Draw', label: 'Draw', logo: '' });
+    opts.push({ value: a.team.displayName, label: a.team.shortDisplayName || a.team.displayName, logo: a.team.logo || '' });
+    return {
+      id: 'game:' + ev.id,
+      title: h.team.displayName + ' v ' + a.team.displayName,
+      when: fmtDay(ev.date) + ' \u00b7 ' + fmtKickoff(ev.date),
+      options: opts, locked: state !== 'pre'
+    };
+  });
+}
+function gameLockedById(pollId) {
+  const id = pollId.replace(/^game:/, '');
+  const ev = (awardsEvents || []).find(e => String(e.id) === id);
+  const st = ev?.competitions?.[0]?.status?.type?.state;
+  return !!(st && st !== 'pre');
+}
+
+function renderPolls() {
+  const wrap = document.getElementById('pollsWrap');
+  if (!wrap) return;
+  const members = [...new Set(sweeps.Hoogies.map(e => e.member))].sort((a, b) => a.localeCompare(b));
+  const teams = teamNameList();
+
+  const voterOptions = [...new Set([...(voterName ? [voterName] : []), ...members])];
+  let html =
+    '<div class="poll-voter">Voting as ' +
+      '<select id="voterInput" class="poll-name">' +
+        '<option value="">Select your name\u2026</option>' +
+        voterOptions.map(m => '<option value="' + esc(m) + '"' + (m === voterName ? ' selected' : '') + '>' + esc(m) + '</option>').join('') +
+      '</select>' +
+    '</div>';
+
+  // Overall winner poll (select of all teams), closes at the final
+  {
+    const v = votes[CHAMPION_POLL.id] || {};
+    const myChoice = voterName ? v[voterName] : null;
+    const voteRow = finalLocked()
+      ? '<div class="poll-closed">Voting closed — the final has kicked off.</div>'
+      : (teams.length
+        ? '<div class="poll-vote">' +
+            '<select class="poll-pick" data-poll="' + esc(CHAMPION_POLL.id) + '"><option value="">Pick a team…</option>' +
+            teams.map(t => '<option value="' + esc(t.name) + '"' + (myChoice === t.name ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') +
+            '</select><button class="poll-btn" data-poll="' + esc(CHAMPION_POLL.id) + '">' + (myChoice ? 'Change vote' : 'Vote') + '</button>' +
+          '</div>'
+        : '<div class="poll-loading">Loading teams…</div>');
+    html += '<div class="poll-card">' +
+      '<div class="poll-q">' + esc(CHAMPION_POLL.q) + '</div>' +
+      voteRow +
+      (myChoice ? '<div class="poll-mychoice">Your pick: <strong>' + esc(myChoice) + '</strong></div>' : '') +
+      '<div class="poll-results">' + barsHtml(pollTally(v), myChoice, nameLogo) + '</div>' +
+      totalLine(v) +
+    '</div>';
+  }
+
+  // Per-game polls
+  const gps = gamePolls();
+  html += '<div class="poll-section">Upcoming games</div>';
+  if (!gps.length) {
+    html += '<div class="poll-empty">' + (awardsEvents ? 'No upcoming fixtures to vote on right now.' : 'Loading fixtures…') + '</div>';
+  } else {
+    gps.forEach(p => {
+      const v = votes[p.id] || {};
+      const myChoice = voterName ? v[voterName] : null;
+      const logoFn = name => { const o = p.options.find(o => o.value === name); return o ? o.logo : nameLogo(name); };
+      const controls = p.locked
+        ? '<div class="poll-closed">Voting closed — game has started.</div>'
+        : '<div class="poll-opts">' + p.options.map(o =>
+            '<button class="poll-opt' + (myChoice === o.value ? ' chosen' : '') + '" data-poll="' + esc(p.id) + '" data-choice="' + esc(o.value) + '">' +
+              (o.logo ? '<img src="' + esc(o.logo) + '" alt="" loading="lazy">' : '') + esc(o.label) +
+            '</button>').join('') + '</div>';
+      html += '<div class="poll-card">' +
+        '<div class="poll-q">' + esc(p.title) + '</div>' +
+        '<div class="poll-when">' + esc(p.when) + '</div>' +
+        controls +
+        (myChoice ? '<div class="poll-mychoice">Your pick: <strong>' + esc(myChoice) + '</strong></div>' : '') +
+        '<div class="poll-results">' + barsHtml(pollTally(v), myChoice, logoFn) + '</div>' +
+        totalLine(v) +
+      '</div>';
+    });
+  }
+  wrap.innerHTML = html;
+}
+
+const pollsWrapEl = document.getElementById('pollsWrap');
+pollsWrapEl.addEventListener('click', (e) => {
+  const opt = e.target.closest('.poll-opt');
+  if (opt) {
+    if (gameLockedById(opt.dataset.poll)) return;   // game already kicked off
+    const vi = document.getElementById('voterInput');
+    const voter = (vi ? vi.value.trim() : voterName);
+    if (!voter) { if (vi) vi.focus(); return; }
+    voterName = voter; store.set('wc26.voterName', voterName);
+    castVote(opt.dataset.poll, voter, opt.dataset.choice);
+    return;
+  }
+  const btn = e.target.closest('.poll-btn');
+  if (!btn) return;
+  const poll = btn.dataset.poll;
+  if (poll === 'champion' && finalLocked()) return;   // voting closed at the final
+  const vi = document.getElementById('voterInput');
+  const voter = (vi ? vi.value.trim() : voterName);
+  if (!voter) { if (vi) vi.focus(); return; }
+  voterName = voter;
+  store.set('wc26.voterName', voterName);
+  const sel = pollsWrapEl.querySelector('.poll-pick[data-poll="' + poll + '"]');
+  const choice = sel ? sel.value : '';
+  if (!choice) { if (sel) sel.focus(); return; }
+  castVote(poll, voter, choice);
+});
+pollsWrapEl.addEventListener('change', (e) => {
+  const vi = e.target.closest('#voterInput');
+  if (!vi) return;
+  voterName = vi.value.trim();
+  store.set('wc26.voterName', voterName);
+  renderPolls();   // reflect this voter's existing picks
+});
+
+function finalFixture() {
+  const ev = (awardsEvents || []).find(e => (e.season?.slug || '') === 'final');
+  if (!ev) return null;
+  const comp = ev.competitions?.[0];
+  const cs = comp?.competitors || [];
+  const h = cs.find(c => c.homeAway === 'home') || cs[0];
+  const a = cs.find(c => c.homeAway === 'away') || cs[1];
+  if (!h || !a || !h.team?.id || !a.team?.id) return null;
+  const state = comp.status?.type?.state;
+  return { ev, h, a, state, date: ev.date,
+    hs: state === 'post' ? Number(h.score) : null,
+    as: state === 'post' ? Number(a.score) : null };
+}
+function finalActual() {
+  const f = finalFixture();
+  if (!f) return null;
+  const h = finalPreds.actualH != null ? finalPreds.actualH : f.hs;
+  const a = finalPreds.actualA != null ? finalPreds.actualA : f.as;
+  if (h == null || a == null) return null;
+  return { h: Number(h), a: Number(a) };
+}
+/* Once the final has kicked off (or finished) the winner is effectively being
+   decided, so champion-poll votes and final-score tips are locked. */
+function finalLocked() {
+  const f = finalFixture();
+  return !!(f && (f.state === 'in' || f.state === 'post'));
+}
+/* Registrants who hold a Shared finalist team — they're the ones who tip */
+function sharedFinalRegistrants() {
+  const f = finalFixture();
+  if (!f) return [];
+  const out = [], seen = new Set();
+  [f.h.team?.id, f.a.team?.id].forEach(tid => {
+    const hs = hoogiesHolders(tid);
+    if (hs.length > 1) hs.forEach(h => {
+      if (!seen.has(h.member)) { seen.add(h.member); out.push({ member: h.member, teamName: teamIndex[tid]?.name || '', role: h.role }); }
+    });
+  });
+  return out;
+}
+/* Resolve a Winner/Finalist Shared Team by the charter's prediction rule:
+   the registrant who tips the exact 90' score wins; if none (or all) correct,
+   it's shared between both. */
+function resolveFinalAward(teamId) {
+  const holders = hoogiesHolders(teamId);
+  if (holders.length <= 1) return holders.map(h => ({ member: h.member, role: h.role, won: true }));
+  const actual = finalActual();
+  if (!actual) {
+    return holders.map(h => ({ member: h.member, role: h.role, won: true,
+      note: 'Shared Team — awaiting final score & predictions' }));
+  }
+  const scored = holders.map(h => {
+    const p = finalPreds.preds[h.member];
+    const has = p && p.h != null && p.a != null;
+    const correct = has && Number(p.h) === actual.h && Number(p.a) === actual.a;
+    return { member: h.member, role: h.role, p, has, correct };
+  });
+  const anyCorrect = scored.some(s => s.correct);
+  return scored.map(s => ({
+    member: s.member, role: s.role,
+    won: anyCorrect ? s.correct : true,
+    note: s.has ? ('tipped ' + s.p.h + '\u2013' + s.p.a + (s.correct ? ' \u2713 correct' : '')) : 'no prediction entered'
+  }));
+}
+function finalGroups(teamId) {
+  return [{ teamId, teamName: teamIndex[teamId]?.name || '', regs: resolveFinalAward(teamId) }];
+}
+
+function renderFinalPredictions() {
+  const el = document.getElementById('predPanel');
+  if (!el) return;
+  const f = finalFixture();
+  const regs = f ? sharedFinalRegistrants() : [];
+  if (!f || !regs.length) { el.innerHTML = ''; return; }   // nothing to tip on
+  const hName = f.h.team?.displayName || 'Home', aName = f.a.team?.displayName || 'Away';
+  const actH = finalPreds.actualH != null ? finalPreds.actualH : (f.hs != null ? f.hs : '');
+  const actA = finalPreds.actualA != null ? finalPreds.actualA : (f.as != null ? f.as : '');
+  const autoNote = (f.state === 'post' && finalPreds.actualH == null && finalPreds.actualA == null)
+    ? ' <span class="pred-auto">(from result — edit if it went to extra time)</span>' : '';
+  const locked = finalLocked();
+  el.innerHTML =
+    '<div class="pred-panel">' +
+      '<div class="pred-title">Final score predictions</div>' +
+      '<div class="pred-sub">' + esc(hName) + ' vs ' + esc(aName) + ' — ' + fmtDay(f.date) +
+        '. Shared-Team finalists are won by whichever registrant tips the exact 90-minute score; if neither does, the prize is split. Enter predictions before kickoff. ' +
+        (PREDICTIONS_WEBAPP_URL ? '<span class="pred-auto">Shared live via Google Sheet.</span>' : '<span class="pred-auto">Saved on this device only.</span>') + '</div>' +
+      (locked ? '<div class="poll-closed">Tips locked — the final has kicked off.</div>' : '') +
+      '<div class="pred-actual">Actual 90\u2019 score: ' +
+        '<input type="number" min="0" class="pred-in" data-k="actualH" value="' + esc(actH) + '"> \u2013 ' +
+        '<input type="number" min="0" class="pred-in" data-k="actualA" value="' + esc(actA) + '">' + autoNote +
+      '</div>' +
+      '<div class="pred-list">' + regs.map(r => {
+        const p = finalPreds.preds[r.member] || {};
+        const actual = finalActual();
+        const correct = actual && p.h != null && p.a != null &&
+          Number(p.h) === actual.h && Number(p.a) === actual.a;
+        return '<div class="pred-row">' +
+          '<span class="pred-name">' + esc(r.member) +
+            ' <span class="pred-team">' + esc(r.teamName) + ' ' + (r.role === 'dud' ? 'Sh*t' : 'Golden') + '</span></span>' +
+          '<input type="number" min="0" class="pred-in" data-pred="' + esc(r.member) + '" data-side="h" value="' + esc(p.h ?? '') + '"' + (locked ? ' disabled' : '') + '> \u2013 ' +
+          '<input type="number" min="0" class="pred-in" data-pred="' + esc(r.member) + '" data-side="a" value="' + esc(p.a ?? '') + '"' + (locked ? ' disabled' : '') + '>' +
+          (correct ? ' <span class="pred-correct">\u2713 correct</span>' : '') +
+        '</div>';
+      }).join('') + '</div>' +
+    '</div>';
+}
+function onPredInput(e) {
+  const inp = e.target.closest('.pred-in');
+  if (!inp) return;
+  const raw = String(inp.value).trim();
+  const v = raw === '' ? null : Math.max(0, Math.floor(Number(raw)));
+  if (inp.dataset.k) {
+    finalPreds[inp.dataset.k] = v;
+    pushPrediction({ type: 'actual', h: finalPreds.actualH, a: finalPreds.actualA });
+  } else if (inp.dataset.pred) {
+    if (finalLocked()) return;   // tips close at kickoff
+    const m = inp.dataset.pred;
+    finalPreds.preds[m] = finalPreds.preds[m] || {};
+    finalPreds.preds[m][inp.dataset.side] = v;
+    const p = finalPreds.preds[m];
+    pushPrediction({ type: 'pred', member: m, h: p.h ?? null, a: p.a ?? null });
+  }
+  saveFinalPreds();
+  renderAwards();   // re-resolve Winner/Finalist; panel keeps focus (separate node)
+}
+
+/* Going Home (eliminate England) / Nobel Peace Prize (eliminate USA) share a
+   structure: award to whoever knocks the target out. */
+function eliminationAward(targetId, opts) {
+  const out = { awarded: false, groups: [] };
+  if (!targetId) return out;
+  const M = awardsCompleted();
+  const finalM = M.find(m => m.slug === 'final');
+  if (finalM && finalM.winner?.team?.id === targetId) {
+    out.awarded = true; out.special = true;
+    out.detail = (teamIndex[targetId]?.name || '') + ' won the World Cup — ' + opts.championNote;
+    if (opts.foldToWinner) out.groups = [{ teamId: targetId, date: finalM.date }];
+    return out;
+  }
+  const koLoss = M.filter(m => m.slug !== 'group-stage' && m.slug !== 'third-place-match' &&
+    m.loser?.team?.id === targetId).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+  if (koLoss) {
+    out.awarded = true;
+    out.detail = (teamIndex[targetId]?.name || '') + ' eliminated by ' +
+      (koLoss.winner.team?.displayName || '?') + ' — ' + fmtDay(koLoss.date);
+    out.groups = [{ teamId: koLoss.winner.team?.id, date: koLoss.date }];
+    return out;
+  }
+  // group-stage elimination: target made no knockout appearance
+  const advanced = (awardsEvents || []).some(ev => {
+    const slug = ev.season?.slug || '';
+    if (slug === 'group-stage') return false;
+    return (ev.competitions?.[0]?.competitors || []).some(c => c.team?.id === targetId);
+  });
+  const groupGames = M.filter(m => m.slug === 'group-stage' &&
+    (m.h.team?.id === targetId || m.a.team?.id === targetId));
+  if (!advanced && groupGames.length >= 3) {
+    const beaters = groupGames.filter(m => m.loser?.team?.id === targetId)
+      .map(m => ({ teamId: m.winner.team?.id, date: m.date }));
+    out.awarded = true;
+    out.detail = (teamIndex[targetId]?.name || '') + ' out at the group stage' +
+      (beaters.length ? ' — shared among teams that beat them' : ' (no group-stage defeat)');
+    out.groups = beaters;
+  }
+  return out;
+}
+
+function computeAwards() {
+  const M = awardsCompleted();
+  const ENG = resolveTeamId('England');
+  const USA = resolveTeamId('USA');
+
+  // World Cup Winner & Losing Finalist
+  const finalM = M.find(m => m.slug === 'final');
+  const winner = { key: 'winner', title: 'World Cup Winner',
+    rule: 'Both holders of the World Cup winner (Shared Team decided by final-score tip).' };
+  if (finalM && finalM.winner) {
+    winner.awarded = true;
+    winner.detail = (finalM.winner.team?.displayName || '') + ' — Final, ' + fmtDay(finalM.date);
+    winner.groups = finalGroups(finalM.winner.team?.id);
+  }
+  const finalist = { key: 'finalist', title: 'Losing Finalist',
+    rule: 'Both holders of the Final loser (Shared Team decided by final-score tip).' };
+  if (finalM && finalM.loser) {
+    finalist.awarded = true;
+    finalist.detail = (finalM.loser.team?.displayName || '') + ' — Final, ' + fmtDay(finalM.date);
+    finalist.groups = finalGroups(finalM.loser.team?.id);
+  }
+
+  // Punchin' — biggest upset by FIFA-ranking gap (1 Apr 2026); tie-breaks:
+  // match goal difference, then winner goals, then ranking-height differential
+  // (height = FIFA ranking position; the more the winner is ranked below the
+  // opponent, the more negative the differential)
+  let punch = null;
+  M.forEach(m => {
+    if (!m.winner || !m.loser) return;
+    const wr = rankOf(m.winner.team?.id), lr = rankOf(m.loser.team?.id);
+    if (wr >= 900 || lr >= 900 || wr <= lr) return;   // must be a resolved upset
+    const cand = { m, diff: wr - lr, gd: m.margin, wg: m.winnerGoals, hdiff: lr - wr };
+    if (!punch) { punch = cand; return; }
+    const better =
+      cand.diff > punch.diff ||
+      (cand.diff === punch.diff && (
+        cand.gd > punch.gd ||
+        (cand.gd === punch.gd && (
+          cand.wg > punch.wg ||
+          (cand.wg === punch.wg && cand.hdiff < punch.hdiff)))));   // most negative wins
+    if (better) punch = cand;
+  });
+  const punchAward = { key: 'punch', title: "Punchin'", preliminary: true,
+    prelimNote: 'Preliminary — stands until a bigger upset is recorded.',
+    rule: 'Biggest upset victory by FIFA-ranking gap (positions as at 1 April 2026).' };
+  if (punch) {
+    punchAward.awarded = true;
+    punchAward.detail = punch.m.label + ' — ' + fmtDay(punch.m.date) + ' (rank gap ' + punch.diff + ')';
+    punchAward.groups = withResolved([{ teamId: punch.m.winner.team?.id, date: punch.m.date }], 'punch');
+  }
+
+  // Biggest Loser — heaviest defeat; tie-break: margin, then fewest goals by loser
+  let worst = null;
+  M.forEach(m => {
+    if (!m.loser) return;
+    const cand = { m, margin: m.margin, lg: m.loserGoals };
+    if (!worst || cand.margin > worst.margin ||
+        (cand.margin === worst.margin && cand.lg < worst.lg)) worst = cand;
+  });
+  const bl = { key: 'bigloss', title: 'Biggest Loser', preliminary: true,
+    prelimNote: 'Preliminary — stands until a heavier defeat is recorded.',
+    rule: 'Heaviest defeat in a single match (greatest losing margin).' };
+  if (worst) {
+    bl.awarded = true;
+    bl.detail = worst.m.label + ' — ' + fmtDay(worst.m.date) + ' (' + worst.margin + '-goal margin)';
+    bl.groups = withResolved([{ teamId: worst.m.loser.team?.id, date: worst.m.date }], 'bigloss');
+  }
+
+  // The Doh — team that concedes the first own goal (summary scan)
+  const doh = { key: 'doh', title: 'The "Doh"',
+    rule: 'The team that concedes the first own goal of the tournament.' };
+  if (dohResult) {
+    doh.awarded = true; doh.detail = dohResult.detail;
+    doh.groups = withResolved([{ teamId: dohResult.teamId, date: dohResult.date }], 'doh');
+  } else if (!summaryScan.done) doh.scanning = true;
+
+  // Soccer Sucks — first 0–0 (KO 0–0 after regulation also qualifies); both teams
+  const ss = M.find(m => m.hs === 0 && m.as === 0);
+  const ssAward = { key: 'soccersucks', title: 'Soccer Sucks',
+    rule: 'The two teams in the first 0–0 of the tournament — prize split between them.' };
+  if (ss) {
+    ssAward.awarded = true;
+    ssAward.detail = ss.label + ' — ' + fmtDay(ss.date);
+    ssAward.groups = withResolved([
+      { teamId: ss.h.team?.id, date: ss.date }, { teamId: ss.a.team?.id, date: ss.date }
+    ], 'soccersucks');
+  }
+
+  // Going Home — eliminate England
+  const gh = eliminationAward(ENG, { championNote: 'added to the World Cup Winner prize', foldToWinner: true });
+  const ghAward = { key: 'goinghome', title: 'Going Home',
+    rule: 'For eliminating England (shared among group-stage conquerors if England fall early).' };
+  Object.assign(ghAward, gh);
+  if (gh.awarded && gh.groups?.length) {
+    ghAward.groups = gh.special
+      ? gh.groups.map(g => finalGroups(g.teamId)[0])
+      : withResolved(gh.groups, 'goinghome');
+  }
+
+  // Nobel Peace Prize — eliminate USA
+  const nb = eliminationAward(USA, { championNote: 'donated to the UN Human Rights Office', foldToWinner: false });
+  const nbAward = { key: 'nobel', title: 'Nobel Peace Prize',
+    rule: 'For eliminating the USA (shared among group-stage conquerors if the USA fall early).' };
+  Object.assign(nbAward, nb);
+  if (nb.awarded && nb.groups?.length) nbAward.groups = withResolved(nb.groups, 'nobel');
+
+  return [winner, finalist, punchAward, bl, doh, ssAward, ghAward, nbAward];
+}
+
+function regChip(r) {
+  const lbl = r.role === 'dud' ? ' (Sh*t)' : ' (Golden)';
+  if (r.won) {
+    return '<span class="aw-chip' + (r.role === 'dud' ? ' dud' : '') + '" title="' +
+      esc(r.note || '') + '">' + esc(r.member) + lbl + '</span>';
+  }
+  return '<span class="aw-chip lost" title="' + esc(r.note || '') + '">' +
+    esc(r.member) + lbl + ' — loses tie-break</span>';
+}
+
+/* Manually entered award winners from the Google Sheet "Awards" tab. Keyed by a
+   normalised award name so it matches either the award key or its title. When an
+   award has manual winners they override the auto-computed result. */
+let awardOverrides = store.get('wc26.awardOverrides', {});
+if (!awardOverrides || typeof awardOverrides !== 'object') awardOverrides = {};
+function awNorm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+async function loadManualAwards() {
+  if (!PREDICTIONS_WEBAPP_URL) return;
+  try {
+    const res = await fetch(PREDICTIONS_WEBAPP_URL + (PREDICTIONS_WEBAPP_URL.includes('?') ? '&' : '?') + 'action=awards', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    if (Array.isArray(rows)) {
+      const map = {};
+      rows.forEach((r, i) => {
+        if (!r || !r.award) return;
+        map[awNorm(r.award)] = { award: r.award, winners: r.winners || '', detail: r.detail || '', order: i };
+      });
+      awardOverrides = map;
+      store.set('wc26.awardOverrides', awardOverrides);
+      renderAwards();
+    }
+  } catch (e) { /* keep the cached copy */ }
+}
+function overrideFor(aw) {
+  return awardOverrides[awNorm(aw.key)] || awardOverrides[awNorm(aw.title)] || null;
+}
+function winnerChips(text) {
+  return String(text).split(/[;\n]+/).map(s => s.trim()).filter(Boolean)
+    .map(s => '<span class="aw-chip">' + esc(s) + '</span>').join('');
+}
+
+function renderAwards() {
+  const wrap = document.getElementById('awardsWrap');
+  if (!awardsEvents) { wrap.innerHTML = '<div class="empty">Loading match results…</div>'; return; }
+  const awards = computeAwards();
+  const usedOverrides = new Set();
+  let html = awards.map(aw => {
+    const ov = overrideFor(aw);
+    const manual = ov && ov.winners.trim();
+    let body, awarded, badge;
+    if (manual) {
+      usedOverrides.add(awNorm(ov.award));
+      awarded = true;
+      badge = '<span class="aw-badge">Awarded</span>';
+      body = (ov.detail ? '<div class="aw-detail">' + esc(ov.detail) + '</div>' : '') +
+        '<div class="aw-team">' + winnerChips(ov.winners) + '</div>';
+    } else if (aw.awarded) {
+      awarded = true;
+      badge = aw.preliminary ? '<span class="aw-badge prelim">Leading</span>' : '<span class="aw-badge">Awarded</span>';
+      const teamsHtml = (aw.groups || []).map(g => {
+        const chips = g.regs.length
+          ? g.regs.map(regChip).join('')
+          : '<span class="aw-none">no Hoogies registrant</span>';
+        return '<div class="aw-team"><span class="aw-team-name">' + esc(g.teamName) + '</span>' + chips + '</div>';
+      }).join('');
+      body = (aw.preliminary ? '<div class="aw-prelim-note">' + esc(aw.prelimNote || 'Preliminary — can still change.') + '</div>' : '') +
+        '<div class="aw-detail">' + esc(aw.detail || '') + '</div>' + teamsHtml;
+    } else if (aw.scanning) {
+      awarded = false; badge = '';
+      body = '<div class="aw-status scanning">Checking match events…</div>';
+    } else {
+      awarded = false; badge = '';
+      body = '<div class="aw-status">Not yet awarded</div>';
+    }
+    return '<div class="aw-card' + (awarded ? ' won' : '') + '">' +
+      '<div class="aw-head"><span class="aw-title">' + esc(aw.title) + '</span>' + badge + '</div>' +
+      '<div class="aw-rule">' + esc(aw.rule) + '</div>' +
+      body +
+    '</div>';
+  }).join('');
+
+  // Any manual award rows that didn't match a known award become their own cards.
+  const extras = Object.values(awardOverrides)
+    .filter(ov => ov.winners.trim() && !usedOverrides.has(awNorm(ov.award)))
+    .sort((a, b) => a.order - b.order);
+  html += extras.map(ov =>
+    '<div class="aw-card won">' +
+      '<div class="aw-head"><span class="aw-title">' + esc(ov.award) + '</span><span class="aw-badge">Awarded</span></div>' +
+      (ov.detail ? '<div class="aw-detail">' + esc(ov.detail) + '</div>' : '') +
+      '<div class="aw-team">' + winnerChips(ov.winners) + '</div>' +
+    '</div>').join('');
+
+  wrap.innerHTML = html;
+}
+
+async function scanSummaries() {
+  if (summaryScan.running || summaryScan.done || dohResult) { if (dohResult) summaryScan.done = true; return; }
+  summaryScan.running = true;
+  const M = awardsCompleted();
+  let count = 0;
+  for (const m of M) {
+    if (dohResult) break;
+    if (count++ > 90) break;   // cap fetches so we never hammer the feed
+    try {
+      const res = await fetch(SUMMARY_URL + encodeURIComponent(m.id));
+      if (!res.ok) continue;
+      const d = await res.json();
+      const ke = d.keyEvents || [];
+      for (const e of ke) {
+        const t = (e.type?.text || '').toLowerCase();
+        if (t.includes('own goal')) {
+          dohResult = { teamId: e.team?.id, date: m.date,
+            detail: (teamIndex[e.team?.id]?.name || e.team?.displayName || 'Own goal') +
+              ' conceded — ' + m.label + ', ' + fmtDay(m.date) };
+          break;
+        }
+      }
+    } catch (e) { /* skip this match */ }
+  }
+  summaryScan.running = false;
+  if (dohResult || count > 90) summaryScan.done = true;
+  renderAwards();
+}
+
+/* Fetch every tournament fixture once (group + knockout); shared by Awards and Polls */
+async function loadFixtures() {
+  if (awardsEvents) return awardsEvents;
+  const merged = {};
+  for (const range of ['20260611-20260628', '20260628-20260720']) {
+    try {
+      const res = await fetch(BASE_URL + '?dates=' + range + '&limit=500');
+      if (!res.ok) continue;
+      const d = await res.json();
+      (d.events || []).forEach(ev => { merged[ev.id] = ev; });
+    } catch (e) { /* try the other range */ }
+  }
+  awardsEvents = Object.values(merged);
+  return awardsEvents;
+}
+
+async function loadAwards() {
+  renderAwards();
+  loadPredictions();
+  loadManualAwards();
+  if (!awardsEvents) await loadFixtures();
+  if (!awardsEvents.length) {
+    document.getElementById('awardsWrap').innerHTML =
+      '<div class="error-box">Could not load awards data. It will retry when you reopen this tab.</div>';
+    awardsEvents = null;   // allow a retry next open
+    return;
+  }
+  renderAwards();
+  renderFinalPredictions();
+  scanSummaries();
+}
+document.getElementById('predPanel').addEventListener('input', onPredInput);
 
 /* ---------- Boot ---------- */
 
