@@ -587,6 +587,27 @@
   }
   .aw-rule { font-size: 13px; color: var(--muted); line-height: 1.4; margin-bottom: 8px; }
   .aw-detail { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+
+  /* Golden Boot tracker */
+  .gb-card .gb-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+  .gb-row {
+    display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 7px; font-size: 14px;
+  }
+  .gb-row:nth-child(odd) { background: rgba(255,255,255,0.02); }
+  .gb-row.leader { background: rgba(232,184,75,0.12); }
+  .gb-rank {
+    width: 18px; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums;
+    font-size: 12px; flex-shrink: 0;
+  }
+  .gb-name { flex: 1; display: flex; align-items: center; gap: 7px; color: var(--text); min-width: 0; }
+  .gb-name img { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  .gb-team { color: var(--muted); font-size: 12px; }
+  .gb-row.leader .gb-name { font-weight: 600; }
+  .gb-goals {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;
+    color: var(--gold); font-variant-numeric: tabular-nums; flex-shrink: 0;
+  }
+  .gb-updating { font-size: 11px; color: var(--muted); margin-top: 6px; }
   .aw-status {
     font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
     letter-spacing: 0.06em; color: var(--muted);
@@ -690,6 +711,39 @@
   }
   .poll-card[data-poll] { cursor: pointer; }
   .poll-card[data-poll] .poll-opts, .poll-card[data-poll] .poll-vote { cursor: default; }
+
+  /* Tipping leaderboard (collapsible) */
+  .poll-lb {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    margin-top: 14px; overflow: hidden;
+  }
+  .poll-lb-head {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    background: none; border: none; cursor: pointer; padding: 13px 16px;
+    color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 17px;
+    font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .poll-lb-head:hover { background: var(--panel-2); }
+  .poll-lb-caret { color: var(--pitch); font-size: 14px; }
+  .poll-lb-body { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .poll-lb-empty { font-size: 13px; color: var(--muted); padding: 4px 4px 8px; }
+  .poll-lb-row {
+    display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 7px; font-size: 14px;
+  }
+  .poll-lb-row:nth-child(odd) { background: rgba(255,255,255,0.02); }
+  .poll-lb-row.top .poll-lb-rank { color: var(--gold); }
+  .poll-lb-row.me { background: rgba(47,191,113,0.12); }
+  .poll-lb-rank {
+    width: 20px; text-align: center; color: var(--muted); font-weight: 600;
+    font-size: 13px; flex-shrink: 0; font-variant-numeric: tabular-nums;
+  }
+  .poll-lb-name { flex: 1; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .poll-lb-row.me .poll-lb-name { font-weight: 600; color: var(--pitch); }
+  .poll-lb-score {
+    flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600;
+  }
+  .poll-lb-pct { color: var(--muted); font-size: 12px; margin-left: 4px; }
   .poll-who-hint {
     font-size: 12px; color: var(--pitch); margin-top: 8px; letter-spacing: 0.02em;
   }
@@ -1398,6 +1452,8 @@ async function load() {
     lastUpdatedEl.textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
     updateCountdown();
     scheduleNext(hasLive);
+    if (currentTab === 'Awards') { refreshLiveScorers(); scanCompletedScorers(); }
+    if (currentTab === 'Polls') renderPolls();
   } catch (err) {
     content.innerHTML = '<div class="error-box">Could not load scores (' + esc(err.message) +
       '). The feed may be briefly unavailable — it will retry automatically, or hit Refresh.</div>';
@@ -2680,6 +2736,120 @@ let awardsEvents = null;
 let dohResult = null;
 const summaryScan = { running: false, done: false };
 
+/* Golden Boot tracker: goals per scorer aggregated from match summaries.
+   Completed matches are cached (their scorers never change); live matches are
+   refetched so the tracker updates during games. */
+let scorerCache = store.get('wc26.scorerCache', {});   // { eventId: [{id,name,teamId,teamAbbr}] }
+if (!scorerCache || typeof scorerCache !== 'object') scorerCache = {};
+let liveScorers = {};                                  // { eventId: [...] } (not persisted)
+const goalsScan = { running: false };
+
+function extractScorers(keyEvents) {
+  const out = [];
+  (keyEvents || []).forEach(e => {
+    const t = (e.type?.text || '').toLowerCase();
+    const isGoal = e.scoringPlay === true || (e.scoringPlay == null && t.includes('goal'));
+    if (!isGoal) return;
+    if (e.shootout === true || t.includes('shootout')) return;   // shootout kicks aren't goals
+    if (t.includes('own')) return;                               // own goals don't count
+    const sc = (e.participants || [])[0]?.athlete;
+    if (!sc) return;
+    out.push({ id: String(sc.id || sc.displayName), name: sc.displayName || '',
+      teamId: e.team?.id || '', teamAbbr: e.team?.abbreviation || e.team?.displayName || '' });
+  });
+  return out;
+}
+function mergedMatches() {
+  const byId = {};
+  (awardsEvents || []).forEach(e => { byId[e.id] = e; });
+  (lastData?.events || []).forEach(e => { byId[e.id] = e; });   // fresher state for today
+  return Object.values(byId);
+}
+async function scanCompletedScorers() {
+  if (goalsScan.running) return;
+  const completed = mergedMatches().filter(e => e.competitions?.[0]?.status?.type?.state === 'post');
+  const todo = completed.filter(e => !scorerCache[e.id]);
+  if (!todo.length) return;
+  goalsScan.running = true;
+  let progressed = 0;
+  for (const m of todo.slice(0, 12)) {
+    try {
+      const res = await fetch(SUMMARY_URL + encodeURIComponent(m.id));
+      if (res.ok) { const d = await res.json(); scorerCache[m.id] = extractScorers(d.keyEvents || []); progressed++; }
+    } catch (e) { /* retry on a later pass */ }
+  }
+  if (progressed) store.set('wc26.scorerCache', scorerCache);
+  goalsScan.running = false;
+  if (progressed) {
+    renderAwards();
+    if (completed.some(e => !scorerCache[e.id])) setTimeout(scanCompletedScorers, 500);
+  }
+}
+async function refreshLiveScorers() {
+  const live = mergedMatches().filter(e => e.competitions?.[0]?.status?.type?.state === 'in');
+  const next = {};
+  let changed = false;
+  for (const m of live) {
+    try {
+      const res = await fetch(SUMMARY_URL + encodeURIComponent(m.id));
+      if (res.ok) { const d = await res.json(); next[m.id] = extractScorers(d.keyEvents || []); changed = true; }
+    } catch (e) { if (liveScorers[m.id]) next[m.id] = liveScorers[m.id]; }
+  }
+  liveScorers = next;
+  if (changed) renderAwards();
+}
+function goldenBoot() {
+  const tally = {};
+  const add = list => (list || []).forEach(s => {
+    const k = s.id || (s.name + '|' + s.teamId);
+    if (!tally[k]) tally[k] = { name: s.name, teamId: s.teamId, teamAbbr: s.teamAbbr, goals: 0 };
+    tally[k].goals++;
+  });
+  Object.values(scorerCache).forEach(add);
+  Object.values(liveScorers).forEach(add);
+  return Object.values(tally).sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
+}
+function goldenBootCard() {
+  // Manual override via the sheet ("Golden Boot") wins if present
+  const ov = awardOverrides[awNorm('Golden Boot')] || awardOverrides[awNorm('goldenboot')];
+  if (ov && ov.winners.trim()) {
+    return '<div class="aw-card won gb-card">' +
+      '<div class="aw-head"><span class="aw-title">Golden Boot</span><span class="aw-badge">Awarded</span></div>' +
+      '<div class="aw-rule">Tournament top goalscorer.</div>' +
+      (ov.detail ? '<div class="aw-detail">' + esc(ov.detail) + '</div>' : '') +
+      '<div class="aw-team">' + winnerChips(ov.winners) + '</div>' +
+    '</div>';
+  }
+  const board = goldenBoot();
+  const f = (typeof finalFixture === 'function') ? finalFixture() : null;
+  const finished = !!(f && f.state === 'post');
+  const badge = board.length
+    ? (finished ? '<span class="aw-badge">Awarded</span>' : '<span class="aw-badge prelim">Leading</span>')
+    : '';
+  let body;
+  if (!board.length) {
+    body = '<div class="aw-status">' + (goalsScan.running ? 'Tallying goals…' : 'No goals scored yet') + '</div>';
+  } else {
+    const top = board[0].goals;
+    const rows = board.slice(0, 10).map((p, i) => {
+      const logo = p.teamId && teamIndex[p.teamId]?.logo ? teamIndex[p.teamId].logo : '';
+      return '<div class="gb-row' + (p.goals === top ? ' leader' : '') + '">' +
+        '<span class="gb-rank">' + (i + 1) + '</span>' +
+        '<span class="gb-name">' + (logo ? '<img src="' + esc(logo) + '" alt="" loading="lazy">' : '') +
+          esc(p.name) + (p.teamAbbr ? ' <span class="gb-team">' + esc(p.teamAbbr) + '</span>' : '') + '</span>' +
+        '<span class="gb-goals">' + p.goals + '</span>' +
+      '</div>';
+    }).join('');
+    body = '<div class="gb-list">' + rows + '</div>' +
+      (goalsScan.running ? '<div class="gb-updating">Updating…</div>' : '');
+  }
+  return '<div class="aw-card gb-card' + (board.length ? ' won' : '') + '">' +
+    '<div class="aw-head"><span class="aw-title">Golden Boot</span>' + badge + '</div>' +
+    '<div class="aw-rule">Tournament top goalscorer (own goals and shootouts excluded).</div>' +
+    body +
+  '</div>';
+}
+
 function hoogiesHolders(teamId) {
   if (!teamId) return [];
   return sweeps.Hoogies.filter(en => en.teamId === teamId)
@@ -2941,6 +3111,58 @@ function gameLockedById(pollId) {
   return !!(st && st !== 'pre');
 }
 
+/* Tipping leaderboard: score each voter's game-winner picks against results. */
+let leaderboardOpen = store.get('wc26.lbOpen', false);
+function gameOutcome(ev) {
+  const comp = ev?.competitions?.[0];
+  if (!comp || comp.status?.type?.state !== 'post') return null;   // only finished games
+  const cs = comp.competitors || [];
+  const w = cs.find(c => c.winner === true);
+  return w ? (w.team?.displayName || null) : 'Draw';
+}
+function pollLeaderboard() {
+  const matches = {};
+  mergedMatches().forEach(e => { matches[e.id] = e; });
+  const tally = {};
+  Object.keys(votes).forEach(pollId => {
+    if (!pollId.startsWith('game:')) return;            // game polls only
+    const ev = matches[pollId.slice(5)];
+    const outcome = ev ? gameOutcome(ev) : null;
+    if (!outcome) return;                               // game not finished / unknown
+    const v = votes[pollId] || {};
+    Object.keys(v).forEach(voter => {
+      const choice = v[voter];
+      if (!choice) return;
+      const t = tally[voter] || (tally[voter] = { correct: 0, total: 0 });
+      t.total++;
+      if (choice === outcome) t.correct++;
+    });
+  });
+  return Object.keys(tally).map(name => ({
+    name, correct: tally[name].correct, total: tally[name].total,
+    pct: tally[name].total ? Math.round(tally[name].correct / tally[name].total * 100) : 0
+  })).sort((a, b) => b.correct - a.correct || b.pct - a.pct || a.name.localeCompare(b.name));
+}
+function leaderboardHtml() {
+  const board = pollLeaderboard();
+  const head = '<button class="poll-lb-head" id="pollLbHead">' +
+    '<span>Tipping leaderboard</span>' +
+    '<span class="poll-lb-caret">' + (leaderboardOpen ? '\u25be' : '\u25b8') + '</span></button>';
+  if (!leaderboardOpen) return '<div class="poll-lb">' + head + '</div>';
+  let body;
+  if (!board.length) {
+    body = '<div class="poll-lb-empty">No completed games yet — game picks get scored once matches finish.</div>';
+  } else {
+    body = board.map((p, i) =>
+      '<div class="poll-lb-row' + (p.name === voterName ? ' me' : '') + (i === 0 ? ' top' : '') + '">' +
+        '<span class="poll-lb-rank">' + (i + 1) + '</span>' +
+        '<span class="poll-lb-name">' + esc(p.name) + '</span>' +
+        '<span class="poll-lb-score">' + p.correct + '/' + p.total + ' <span class="poll-lb-pct">' + p.pct + '%</span></span>' +
+      '</div>').join('');
+  }
+  return '<div class="poll-lb">' + head + '<div class="poll-lb-body">' + body + '</div></div>';
+}
+
 function renderPolls() {
   const wrap = document.getElementById('pollsWrap');
   if (!wrap) return;
@@ -2955,6 +3177,8 @@ function renderPolls() {
         voterOptions.map(m => '<option value="' + esc(m) + '"' + (m === voterName ? ' selected' : '') + '>' + esc(m) + '</option>').join('') +
       '</select>' +
     '</div>';
+
+  html += leaderboardHtml();
 
   // Overall winner poll (select of all teams), closes at the final
   {
@@ -3017,6 +3241,13 @@ function renderPolls() {
 
 const pollsWrapEl = document.getElementById('pollsWrap');
 pollsWrapEl.addEventListener('click', (e) => {
+  const lb = e.target.closest('#pollLbHead');
+  if (lb) {
+    leaderboardOpen = !leaderboardOpen;
+    store.set('wc26.lbOpen', leaderboardOpen);
+    renderPolls();
+    return;
+  }
   const opt = e.target.closest('.poll-opt');
   if (opt) {
     if (gameLockedById(opt.dataset.poll)) return;   // game already kicked off
@@ -3409,7 +3640,8 @@ function renderAwards() {
   if (!awardsEvents) { wrap.innerHTML = '<div class="empty">Loading match results…</div>'; return; }
   const awards = computeAwards();
   const usedOverrides = new Set();
-  let html = awards.map(aw => {
+  let html = goldenBootCard();
+  html += awards.map(aw => {
     const ov = overrideFor(aw);
     const manual = ov && ov.winners.trim();
     let body, awarded, badge;
@@ -3525,6 +3757,8 @@ async function loadAwards() {
   renderAwards();
   renderFinalPredictions();
   scanSummaries();
+  scanCompletedScorers();
+  refreshLiveScorers();
 }
 document.getElementById('predPanel').addEventListener('input', onPredInput);
 
