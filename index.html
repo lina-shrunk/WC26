@@ -480,11 +480,61 @@
 
   /* Bracket */
   .bracket-wrap { margin-top: 18px; }
-  .bracket {
-    display: grid;
-    grid-template-columns: 1.25fr 1fr 1fr 1fr 1.15fr;
-    gap: 8px;
-    width: 100%;
+  .bracket-halves { display: flex; flex-direction: column; gap: 16px; }
+  .b-half-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px; padding-left: 2px;
+  }
+  .b-half-toggle {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    background: none; border: none; cursor: pointer; padding: 0 2px; color: inherit;
+    font: inherit; letter-spacing: inherit; text-transform: inherit;
+  }
+  .b-half-toggle:hover { color: var(--text); }
+  .b-half-caret { color: var(--pitch); font-size: 11px; letter-spacing: 0.08em; }
+  .b-half.collapsed .bracket-scroll { display: none; }
+  .b-half-label.b-top::before, .b-half-label.b-bot::before {
+    content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    margin-right: 8px; vertical-align: middle;
+  }
+  .b-half-label.b-top::before { background: var(--pitch); }
+  .b-half-label.b-bot::before { background: var(--gold); }
+  .bracket-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .bracket-scroll { scrollbar-width: thin; scrollbar-color: var(--pitch) rgba(255,255,255,0.05); }
+  .bracket-scroll::-webkit-scrollbar { height: 9px; }
+  .bracket-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 8px; }
+  .bracket-scroll::-webkit-scrollbar-thumb { background: var(--pitch); border-radius: 8px; }
+  .bracket-scroll::-webkit-scrollbar-thumb:hover { background: #45d684; }
+  /* Subtle green scrollbar app-wide */
+  html { scrollbar-width: thin; scrollbar-color: var(--pitch) transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--pitch); border-radius: 8px;
+    border: 2px solid transparent; background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #45d684; background-clip: padding-box; }
+  .b-grid4 {
+    display: grid; grid-template-columns: repeat(4, minmax(124px, 1fr));
+    gap: 28px; min-width: 580px; align-items: start; --bslot: 126px; --bconn: 14px;
+  }
+  .b-final-band {
+    border: 1px solid rgba(232,184,75,0.35); border-radius: 12px;
+    background: linear-gradient(180deg, rgba(232,184,75,0.07), rgba(232,184,75,0));
+    padding: 14px 12px; text-align: center;
+  }
+  .b-final-band .b-half-label.b-fin { color: var(--gold); text-align: center; margin-bottom: 12px; }
+  .b-trophy3d {
+    width: 104px; height: 128px; margin: 0 auto 4px;
+    filter: drop-shadow(0 3px 8px rgba(47,191,113,0.30));
+  }
+  .b-trophy3d-canvas { display: block; width: 104px; height: 128px; }
+  .b-final-cell { max-width: 300px; margin: 0 auto; }
+  .b-third { max-width: 300px; margin: 16px auto 0; }
+  .b-third-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
   }
   .b-col { display: flex; flex-direction: column; min-width: 0; }
   .b-round-label {
@@ -493,14 +543,46 @@
     color: var(--muted); text-align: center; margin-bottom: 10px; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
   }
-  .b-cells { display: flex; flex-direction: column; justify-content: space-around; flex: 1; gap: 6px; }
+  .b-cells { display: flex; flex-direction: column; }
+  .b-slot { position: relative; }
+  /* Fixed per-round slot heights: each round's slot is twice the previous, so a
+     match sits exactly on the midpoint between the two that feed it, regardless
+     of how tall the cell content (sweep chips) happens to be. */
+  .b-col.b-r0 .b-slot { height: var(--bslot); }
+  .b-col.b-r1 .b-slot { height: calc(var(--bslot) * 2); }
+  .b-col.b-r2 .b-slot { height: calc(var(--bslot) * 4); }
+  .b-col.b-r3 .b-slot { height: calc(var(--bslot) * 8); }
+  /* The cell fills the slot's width and is centred vertically, so the slot's
+     right/left edges (where connectors anchor) coincide exactly with the cell. */
+  .b-slot .b-cell {
+    position: absolute; top: 50%; left: 0; right: 0;
+    transform: translateY(-50%);
+  }
+  /* Connector lines. Each match links to the next round with an elbow that meets
+     its sibling at the exact vertical midpoint between the two feeding matches. */
+  .b-col:not(:last-child) .b-slot:nth-child(odd)::after {
+    content: ''; position: absolute; left: 100%; top: 50%; width: var(--bconn); height: 50%;
+    border-top: 2px solid var(--line); border-right: 2px solid var(--line);
+    pointer-events: none;
+  }
+  .b-col:not(:last-child) .b-slot:nth-child(even)::after {
+    content: ''; position: absolute; left: 100%; bottom: 50%; width: var(--bconn); height: 50%;
+    border-bottom: 2px solid var(--line); border-right: 2px solid var(--line);
+    pointer-events: none;
+  }
+  .b-col:not(:first-child) .b-slot::before {
+    content: ''; position: absolute; right: 100%; top: 50%; width: var(--bconn); height: 2px;
+    background: var(--line); pointer-events: none;
+  }
   .b-cell {
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
     padding: 6px 7px; backdrop-filter: blur(2px); min-width: 0;
   }
   .b-cell.b-live { border-color: rgba(255,70,85,0.45); }
-  .b-team { display: flex; align-items: center; gap: 5px; min-width: 0; flex-wrap: wrap; }
-  .b-team + .b-team { margin-top: 5px; }
+  .b-team { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .b-team + .b-team { margin-top: 6px; }
+  .b-team-row { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .b-team-chips { display: flex; flex-wrap: wrap; gap: 3px; }
   .b-flag {
     width: 22px; height: 22px; object-fit: contain; flex-shrink: 0;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
@@ -511,19 +593,19 @@
   }
   .b-name {
     font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1;
   }
   .b-team.b-winner .b-name { color: var(--gold); }
   .b-team.b-loser { opacity: 0.5; }
   .b-team.b-tbd .b-name { color: var(--muted); font-weight: 500; font-size: 12px; }
   .b-score {
     margin-left: auto; font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+    font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0;
   }
   .b-chip {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 9px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-    border-radius: 3px; padding: 0 4px; flex-shrink: 1; min-width: 0;
+    border-radius: 3px; padding: 1px 4px; min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
   }
   .b-chip.hoogies { color: var(--gold); border: 1px solid rgba(232,184,75,0.45); }
@@ -546,7 +628,7 @@
     .b-flag, .b-flag-tbd { width: 17px; height: 17px; }
     .b-cell { padding: 4px 5px; }
     .b-chip { font-size: 8px; }
-    .bracket { gap: 5px; }
+    .b-grid4 { gap: 22px; min-width: 510px; --bslot: 130px; --bconn: 11px; }
   }
 
   /* Awards */
@@ -1657,6 +1739,14 @@ const tabPolls = document.getElementById('tabPolls');
 const matchesView = document.getElementById('matchesView');
 const groupsView = document.getElementById('groupsView');
 const bracketView = document.getElementById('bracketView');
+document.getElementById('bracketWrap').addEventListener('click', (e) => {
+  const t = e.target.closest('.b-half-toggle');
+  if (!t) return;
+  const which = t.dataset.half;
+  bracketCollapse[which] = !bracketCollapse[which];
+  store.set('wc26.bracketCollapse2', bracketCollapse);
+  renderBracket();
+});
 const sweepsView = document.getElementById('sweepsView');
 const awardsView = document.getElementById('awardsView');
 const pollsView = document.getElementById('pollsView');
@@ -2106,6 +2196,8 @@ function stageShort(slug) {
 }
 
 let koEvents = null;
+let bracketCollapse = store.get('wc26.bracketCollapse2', { top: true, bottom: true });
+if (!bracketCollapse || typeof bracketCollapse !== 'object') bracketCollapse = { top: true, bottom: true };
 async function loadKnockouts() {
   if (elimsLoaded) { renderBracket(); return; }
   elimsLoaded = true;   // attempt once per page load
@@ -2141,7 +2233,7 @@ async function loadKnockouts() {
 
 function bTeamHtml(c) {
   if (!c || !c.team) {
-    return '<div class="b-team b-tbd"><span class="b-flag-tbd"></span><span class="b-name">TBD</span></div>';
+    return '<div class="b-team b-tbd"><div class="b-team-row"><span class="b-flag-tbd"></span><span class="b-name">TBD</span></div></div>';
   }
   const t = c.team;
   const tags = sweepTagsFor(t.id);
@@ -2152,11 +2244,13 @@ function bTeamHtml(c) {
     (tag.role === 'dud' ? ' (' + esc(roleLabel(tag.league, 'dud').toLowerCase()) + ')' : '') + '">' +
     esc(tag.member) + '</span>').join('');
   return '<div class="b-team' + cls + '">' +
-    (t.logo ? '<img class="b-flag" src="' + esc(t.logo) + '" alt="' + esc(t.displayName || '') + ' flag" loading="lazy">'
-            : '<span class="b-flag-tbd"></span>') +
-    '<span class="b-name">' + esc(t.abbreviation || t.shortDisplayName || t.displayName || '?') + '</span>' +
-    (c.score != null && c.score !== '' ? '<span class="b-score">' + esc(c.score) + '</span>' : '') +
-    chips +
+    '<div class="b-team-row">' +
+      (t.logo ? '<img class="b-flag" src="' + esc(t.logo) + '" alt="' + esc(t.displayName || '') + ' flag" loading="lazy">'
+              : '<span class="b-flag-tbd"></span>') +
+      '<span class="b-name">' + esc(t.abbreviation || t.shortDisplayName || t.displayName || '?') + '</span>' +
+      (c.score != null && c.score !== '' ? '<span class="b-score">' + esc(c.score) + '</span>' : '') +
+    '</div>' +
+    (chips ? '<div class="b-team-chips">' + chips + '</div>' : '') +
   '</div>';
 }
 
@@ -2179,19 +2273,85 @@ function bCellHtml(ev) {
 function bColHtml(label, events, extraClass) {
   return '<div class="b-col' + (extraClass ? ' ' + extraClass : '') + '">' +
     '<div class="b-round-label">' + esc(label) + '</div>' +
-    '<div class="b-cells">' + events.map(bCellHtml).join('') + '</div>' +
+    '<div class="b-cells">' + events.map(ev => '<div class="b-slot">' + bCellHtml(ev) + '</div>').join('') + '</div>' +
   '</div>';
+}
+
+/* Miniature spinning trophy for the Final, rendered from trophy.glb (the same
+   model as the background). A singleton renderer whose canvas is re-mounted on
+   each bracket render; falls back to a procedural gold trophy if the GLB fails. */
+let miniTrophy = null;
+function initMiniTrophy() {
+  if (miniTrophy || typeof THREE === 'undefined') return;
+  const W = 104, H = 128;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'b-trophy3d-canvas';
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(W, H, false);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
+  camera.position.set(0, 0, 13);
+  scene.add(new THREE.AmbientLight(0xcfd8e3, 0.85));
+  const key = new THREE.DirectionalLight(0xfff3dc, 1.6); key.position.set(3, 6, 5); scene.add(key);
+  const rim = new THREE.DirectionalLight(0x2fbf71, 0.5); rim.position.set(-4, -2, -3); scene.add(rim);
+  const holder = new THREE.Group(); scene.add(holder);
+  miniTrophy = { renderer, scene, camera, canvas, holder };
+
+  const frame = (obj) => {
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3());
+    const centre = box.getCenter(new THREE.Vector3());
+    const scale = 7 / Math.max(size.y, 0.0001);
+    obj.scale.setScalar(scale);
+    obj.position.sub(centre.multiplyScalar(scale));
+    holder.add(obj);
+  };
+  const procedural = () => {
+    const gold = new THREE.MeshPhongMaterial({ color: 0xd9b24a, specular: 0xfff2c4, shininess: 80 });
+    const g = new THREE.Group();
+    const pts = [[1.05,0],[1.05,0.22],[0.78,0.3],[0.62,0.55],[0.3,0.75],[0.2,1.1],
+      [0.26,1.7],[0.2,2.3],[0.34,2.75],[0.72,3.1],[0.92,3.5],[0.96,3.9],[0.88,4.0]]
+      .map(p => new THREE.Vector2(p[0], p[1]));
+    g.add(new THREE.Mesh(new THREE.LatheGeometry(pts, 40), gold));
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.62, 24, 18), gold);
+    orb.position.y = 4.3; g.add(orb);
+    frame(g);
+  };
+  const tryLoad = (urls) => {
+    if (!urls.length || !THREE.GLTFLoader) { procedural(); return; }
+    new THREE.GLTFLoader().load(urls[0], gltf => frame(gltf.scene), undefined,
+      () => tryLoad(urls.slice(1)));
+  };
+  tryLoad(['trophy.glb', 'https://raw.githubusercontent.com/shrunk-scott/worldies/main/trophy.glb']);
+
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function animate() {
+    miniTrophy.raf = requestAnimationFrame(animate);
+    if (!canvas.isConnected) return;               // skip GPU work when off-screen
+    if (!reduce) holder.rotation.y += 0.012;
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+function mountMiniTrophy() {
+  initMiniTrophy();
+  const mount = document.getElementById('trophyMount');
+  if (mount && miniTrophy && miniTrophy.canvas && miniTrophy.canvas.parentNode !== mount) {
+    mount.appendChild(miniTrophy.canvas);
+  }
 }
 
 function renderBracket() {
   const wrap = document.getElementById('bracketWrap');
   if (!koEvents) return;   // nothing fetched yet
-  const evs = koEvents;
-  const bySlug = slug => evs
+  // Bracket position order: event id ascending tracks the match number (and thus
+  // the top-to-bottom bracket slot) far better than kickoff date.
+  const ordKey = e => Number(e.id) || 0;
+  const bySlug = slug => koEvents
     .filter(e => (e.season?.slug || '') === slug)
-    .sort((a, b) => new Date(a.date) - new Date(b.date) || (a.id > b.id ? 1 : -1));
+    .sort((a, b) => ordKey(a) - ordKey(b) || (new Date(a.date) - new Date(b.date)));
 
-  // Pad each round to its full size with TBD cells
   function pad(arr, n) {
     const out = arr.slice(0, n);
     while (out.length < n) out.push(null);
@@ -2202,6 +2362,15 @@ function renderBracket() {
   const QF = pad(bySlug('quarterfinals'), 4);
   const SF = pad(bySlug('semifinals'), 2);
   const FIN = pad(bySlug('final'), 1);
+  const TP = bySlug('third-place-match')[0] || null;
+
+  const half = (r32, r16, qf, sf) =>
+    '<div class="bracket-scroll"><div class="b-grid4">' +
+      bColHtml('Round of 32', r32, 'b-r0') +
+      bColHtml('Round of 16', r16, 'b-r1') +
+      bColHtml('Quarter-finals', qf, 'b-r2') +
+      bColHtml('Semi-final', sf, 'b-r3') +
+    '</div></div>';
 
   let winnerHtml = '';
   if (champion && teamIndex[champion]) {
@@ -2215,20 +2384,36 @@ function renderBracket() {
     '</div>';
   }
 
-  const finalCol = '<div class="b-col">' +
-    '<div class="b-round-label">Final</div>' +
-    '<div class="b-cells">' + FIN.map(bCellHtml).join('') + winnerHtml + '</div>' +
-  '</div>';
+  const thirdHtml = TP
+    ? '<div class="b-third"><div class="b-third-label">Third-place play-off</div>' + bCellHtml(TP) + '</div>'
+    : '';
+
+  const halfBlock = (which, label, dotClass, body) => {
+    const collapsed = !!bracketCollapse[which];
+    const caret = collapsed ? '\u25b8 show' : '\u25be hide';
+    return '<div class="b-half' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="b-half-label ' + dotClass + '">' +
+        '<button class="b-half-toggle" data-half="' + which + '"><span>' + label + '</span>' +
+          '<span class="b-half-caret">' + caret + '</span></button>' +
+      '</div>' + body +
+    '</div>';
+  };
+
+  const trophy = '<div id="trophyMount" class="b-trophy3d" aria-hidden="true"></div>';
 
   wrap.innerHTML =
-    '<div class="bracket">' +
-      bColHtml('Round of 32', R32) +
-      bColHtml('R16', R16) +
-      bColHtml('QF', QF) +
-      bColHtml('SF', SF) +
-      finalCol +
+    '<div class="bracket-halves">' +
+      '<div class="b-final-band">' +
+        trophy +
+        '<div class="b-half-label b-fin">Final</div>' +
+        '<div class="b-final-cell">' + bCellHtml(FIN[0]) + '</div>' +
+        winnerHtml + thirdHtml +
+      '</div>' +
+      halfBlock('top', 'Top half', 'b-top', half(R32.slice(0, 8), R16.slice(0, 4), QF.slice(0, 2), [SF[0]])) +
+      halfBlock('bottom', 'Bottom half', 'b-bot', half(R32.slice(8, 16), R16.slice(4, 8), QF.slice(2, 4), [SF[1]])) +
     '</div>' +
-    '<div class="bracket-note">Slots fill in as the knockout draw is decided — Round of 32 kicks off 28 June.</div>';
+    '<div class="bracket-note">Top half and bottom half each run left to right to a semi-final; the two winners meet in the final. Tap a half to expand it. Pairings fill in as the draw is confirmed — Round of 32 kicks off 28 June.</div>';
+  mountMiniTrophy();
 }
 
 function sweepPoints(en) {
