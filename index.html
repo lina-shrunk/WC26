@@ -2364,6 +2364,25 @@ function renderBracket() {
   const FIN = pad(bySlug('final'), 1);
   const TP = bySlug('third-place-match')[0] || null;
 
+  /* WC-2026 knockout feeding map — confirmed against ESPN's own bracket linkage
+     (the placeholder team names in the scoreboard feed, e.g. "Round of 32 1
+     Winner"). Slot numbers are 1-based and match each round's event-id ascending
+     order (R32 = slots 1-16, R16 = 1-8, QF = 1-4, SF = 1-2). ESPN numbers
+     matches by schedule, NOT by bracket position, so the tree is not a naive
+     1-2 / 3-4 pairing — these arrays encode who actually feeds whom:
+         R16 slot ← R32 {1,3}{2,5}{4,6}{7,8}{11,12}{9,10}{13,15}{14,16}
+         QF  slot ← R16 {1,2}{5,6}{3,4}{7,8}
+         SF  slot ← QF  {1,2}{3,4}
+     Each array below is the top-to-bottom display order for that half, walked
+     down the tree so every match sits between its two real feeders. If FIFA/
+     ESPN ever reseed the bracket, update these constants. */
+  const BRACKET = {
+    top:    { r32: [1, 3, 2, 5, 11, 12, 9, 10], r16: [1, 2, 5, 6], qf: [1, 2], sf: [1] },
+    bottom: { r32: [4, 6, 7, 8, 13, 15, 14, 16], r16: [3, 4, 7, 8], qf: [3, 4], sf: [2] }
+  };
+  // Map 1-based bracket slot numbers onto a round's id-ordered array.
+  const pick = (arr, slots) => slots.map(s => arr[s - 1] || null);
+
   const half = (r32, r16, qf, sf) =>
     '<div class="bracket-scroll"><div class="b-grid4">' +
       bColHtml('Round of 32', r32, 'b-r0') +
@@ -2409,8 +2428,12 @@ function renderBracket() {
         '<div class="b-final-cell">' + bCellHtml(FIN[0]) + '</div>' +
         winnerHtml + thirdHtml +
       '</div>' +
-      halfBlock('top', 'Top half', 'b-top', half(R32.slice(0, 8), R16.slice(0, 4), QF.slice(0, 2), [SF[0]])) +
-      halfBlock('bottom', 'Bottom half', 'b-bot', half(R32.slice(8, 16), R16.slice(4, 8), QF.slice(2, 4), [SF[1]])) +
+      halfBlock('top', 'Top half', 'b-top',
+        half(pick(R32, BRACKET.top.r32), pick(R16, BRACKET.top.r16),
+             pick(QF, BRACKET.top.qf), pick(SF, BRACKET.top.sf))) +
+      halfBlock('bottom', 'Bottom half', 'b-bot',
+        half(pick(R32, BRACKET.bottom.r32), pick(R16, BRACKET.bottom.r16),
+             pick(QF, BRACKET.bottom.qf), pick(SF, BRACKET.bottom.sf))) +
     '</div>' +
     '<div class="bracket-note">Top half and bottom half each run left to right to a semi-final; the two winners meet in the final. Tap a half to expand it. Pairings fill in as the draw is confirmed — Round of 32 kicks off 28 June.</div>';
   mountMiniTrophy();
