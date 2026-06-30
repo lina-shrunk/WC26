@@ -349,6 +349,21 @@
   .card-yellow { background: var(--gold); }
   .card-red { background: var(--live); }
   .detail-note { font-size: 13px; color: var(--muted); padding: 4px 0; }
+  .shootout-summary {
+    margin: 6px 0 8px; padding: 8px 10px; border: 1px solid rgba(232,184,75,0.35);
+    border-radius: 8px; background: rgba(232,184,75,0.06); font-size: 13px;
+  }
+  .shootout-title {
+    font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--gold); font-weight: 700; margin-bottom: 4px;
+  }
+  .shootout-line { color: var(--text); }
+  .shootout-mini { font-size: 11px; color: var(--gold); font-weight: 600; white-space: nowrap; }
+  .b-pen-score { color: var(--gold); font-size: 11px; margin-left: 2px; }
+  .b-shootout-note {
+    margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(232,184,75,0.18);
+    color: var(--gold); font-size: 10px; font-weight: 600; text-align: center;
+  }
 
   /* Groups view */
   .groups-grid {
@@ -1236,6 +1251,53 @@ function esc(s) {
 function fmtKickoff(iso) {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
+function firstDefined(...vals) {
+  return vals.find(v => v !== undefined && v !== null && v !== '');
+}
+function numText(v) {
+  if (v === undefined || v === null || v === '') return '';
+  const n = Number(v);
+  return Number.isFinite(n) ? String(n) : String(v);
+}
+function competitorPenaltyScore(c) {
+  if (!c) return '';
+  return numText(firstDefined(
+    c.shootoutScore, c.shootout, c.penaltyScore, c.penalties, c.penaltyShootoutScore,
+    c.penaltyKickScore, c.records?.shootoutScore, c.linescores?.penalties
+  ));
+}
+function competitionHasShootout(comp) {
+  if (!comp) return false;
+  if (comp.shootout === true || comp.hasShootout === true || comp.penaltyShootout === true) return true;
+  const comps = comp.competitors || [];
+  return comps.some(c => competitorPenaltyScore(c) !== '');
+}
+function shootoutSummaryHtmlFromCompetition(comp, className) {
+  if (!comp || !competitionHasShootout(comp)) return '';
+  const comps = (comp.competitors || []).slice().sort((a, b) => (a.homeAway === 'home' ? -1 : 1));
+  const bits = comps.map(c => {
+    const t = c.team || {};
+    const ps = competitorPenaltyScore(c);
+    if (ps === '') return '';
+    return esc(t.shortDisplayName || t.abbreviation || t.displayName || t.name || 'Team') + ' ' + esc(ps);
+  }).filter(Boolean);
+  if (!bits.length) return '';
+  if (className === 'mini') return '<span class="shootout-mini">Pens ' + bits.join(' - ') + '</span>';
+  if (className === 'bracket') return '<div class="b-shootout-note">Pens ' + bits.join(' - ') + '</div>';
+  return '<div class="shootout-summary"><div class="shootout-title">Penalty shootout</div>' +
+    '<div class="shootout-line">' + bits.join(' &nbsp;·&nbsp; ') + '</div></div>';
+}
+function shootoutEventHtml(e) {
+  const clock = e.clock?.displayValue || 'Pens';
+  const who = (e.participants || []).map(p => p.athlete?.displayName).filter(Boolean).join(', ');
+  const teamAbbr = e.team?.abbreviation || e.team?.displayName || '';
+  const text = who || e.text || e.type?.text || 'Penalty shootout';
+  return '<div class="detail-event">' +
+    '<span class="detail-clock">' + esc(clock) + '</span>' +
+    '<span class="detail-icon">⚽</span>' +
+    '<span>' + esc(text) + (teamAbbr ? ' <span style="color:var(--muted)">(' + esc(teamAbbr) + ')</span>' : '') + '</span>' +
+  '</div>';
+}
 function stageLabel(ev) {
   const slug = ev.season?.slug || '';
   const map = {
@@ -1323,7 +1385,7 @@ function matchCard(ev) {
     const desc = st.type?.description || 'Live';
     stateHtml = '<span class="match-state live">' + esc(clock && clock !== "0'" ? clock : desc) + '</span>';
   } else if (state === 'post') {
-    stateHtml = '<span class="match-state ft">FT</span>';
+    stateHtml = '<span class="match-state ft">FT</span>' + shootoutSummaryHtmlFromCompetition(comp, 'mini');
   } else {
     const vTime = venueTime(ev.date, comp.venue?.address?.city);
     stateHtml = '<span class="match-state kick">' + fmtKickoff(ev.date) + '</span>' +
@@ -1443,21 +1505,26 @@ async function loadDetails(eventId) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const events = data.keyEvents || [];
+    const summaryComp = data.competitions?.[0] || data.header?.competitions?.[0] || null;
+    const shootoutSummary = shootoutSummaryHtmlFromCompetition(summaryComp, 'details');
     const rows = events
       .filter(e => {
-        const t = (e.type?.text || '').toLowerCase();
-        return e.scoringPlay === true || e.redCard === true || e.yellowCard === true ||
-          t.includes('goal') || t.includes('card') || t.includes('penalty');
+        const t = ((e.type?.text || '') + ' ' + (e.text || '')).toLowerCase();
+        return e.scoringPlay === true || e.redCard === true || e.yellowCard === true || e.shootout === true ||
+          t.includes('goal') || t.includes('card') || t.includes('penalty') ||
+          t.includes('shootout') || t.includes('shoot-out');
       })
       .map(e => {
-        const t = (e.type?.text || '').toLowerCase();
+        const t = ((e.type?.text || '') + ' ' + (e.text || '')).toLowerCase();
+        const isShootout = e.shootout === true || t.includes('shootout') || t.includes('shoot-out');
+        if (isShootout) return shootoutEventHtml(e);
         const own = t.includes('own');
         // A scoring play is a goal even if other text is present; only treat as a
         // card when ESPN's card flag (or unambiguous card text) says so.
         const isGoal = e.scoringPlay === true || (e.scoringPlay == null && t.includes('goal'));
         const isRed = !isGoal && (e.redCard === true || (e.redCard == null && t.includes('red')));
         const isYellow = !isGoal && !isRed && (e.yellowCard === true || t.includes('yellow') || t.includes('card'));
-        let icon = ICON.ball;                                          // goal (default)
+        let icon = ICON.ball;                                          // goal/penalty (default)
         if (isGoal) icon = own ? ICON.ball + ' <span style="color:var(--muted);font-size:11px">OG</span>' : ICON.ball;
         else if (isRed) icon = '<span class="card-red"></span>';
         else if (isYellow) icon = '<span class="card-yellow"></span>';
@@ -1471,9 +1538,9 @@ async function loadDetails(eventId) {
           '<span>' + esc(text) + (teamAbbr ? ' <span style="color:var(--muted)">(' + esc(teamAbbr) + ')</span>' : '') + '</span>' +
         '</div>';
       });
-    detailsCache[eventId] = rows.length
-      ? rows.join('')
-      : '<div class="detail-note">No goals or cards yet.</div>';
+    detailsCache[eventId] = (shootoutSummary || rows.length)
+      ? shootoutSummary + rows.join('')
+      : '<div class="detail-note">No goals, cards or shootout details yet.</div>';
   } catch (err) {
     detailsCache[eventId] = '<div class="detail-note">Could not load match events. Tap to close and try again.</div>';
   }
@@ -1871,6 +1938,7 @@ async function loadStandings() {
     });
     renderGroups();
     buildTeamIndex();
+    applyGroupStageEliminations();
     resolveSweepTeamIds();
     populateMemberFilter();
     renderSweeps();
@@ -2011,7 +2079,7 @@ function buildTeamIndex() {
   teamIndex = {};
   (standingsData?.children || []).forEach(g => {
     const letter = (g.name || '').replace(/group\s*/i, '').trim();
-    (g.standings?.entries || []).forEach((en, i) => {
+    ladderSort(g.standings?.entries || []).forEach((en, i) => {
       const t = en.team || {};
       if (!t.id) return;
       teamIndex[t.id] = {
@@ -2030,6 +2098,50 @@ function buildTeamIndex() {
       };
     });
   });
+}
+
+function clearGroupStageEliminations() {
+  Object.keys(eliminated).forEach(id => { if (eliminated[id] === 'Group') delete eliminated[id]; });
+}
+function teamStatNumber(t, key) {
+  const n = parseFloat(t?.[key]);
+  return Number.isFinite(n) ? n : 0;
+}
+function groupStageCompleteEnough() {
+  const groups = standingsData?.children || [];
+  return groups.length >= 12 && groups.every(g =>
+    (g.standings?.entries || []).length >= 4 &&
+    (g.standings?.entries || []).every(en => (statNum(en, ['gamesPlayed', 'GP']) || 0) >= 3));
+}
+function applyGroupStageEliminations(knockoutTeamIds) {
+  clearGroupStageEliminations();
+
+  // Best source once ESPN has filled the Round of 32: any team missing from the
+  // knockout draw was knocked out in the group stage.
+  if (knockoutTeamIds && knockoutTeamIds.size >= 32) {
+    Object.keys(teamIndex).forEach(id => {
+      if (!knockoutTeamIds.has(id) && !eliminated[id] && champion !== id) eliminated[id] = 'Group';
+    });
+    return;
+  }
+
+  // Before the R32 draw is fully populated, mark confirmed group exits. 4th place
+  // is out once that group has played three games; 3rd-place exits are only safe
+  // once every group has finished because the best eight 3rd-place teams advance.
+  Object.keys(teamIndex).forEach(id => {
+    const t = teamIndex[id];
+    if (!eliminated[id] && Number(t.gp) >= 3 && Number(t.rank) >= 4) eliminated[id] = 'Group';
+  });
+
+  if (!groupStageCompleteEnough()) return;
+  const thirds = Object.keys(teamIndex)
+    .filter(id => Number(teamIndex[id].rank) === 3)
+    .sort((a, b) =>
+      teamStatNumber(teamIndex[b], 'pts') - teamStatNumber(teamIndex[a], 'pts') ||
+      teamStatNumber(teamIndex[b], 'gd') - teamStatNumber(teamIndex[a], 'gd') ||
+      teamStatNumber(teamIndex[b], 'gf') - teamStatNumber(teamIndex[a], 'gf') ||
+      teamIndex[a].name.localeCompare(teamIndex[b].name));
+  thirds.slice(8).forEach(id => { if (!eliminated[id]) eliminated[id] = 'Group'; });
 }
 
 /* Which league's tags show on Matches/Bracket — set by opening a league tab */
@@ -2207,7 +2319,17 @@ async function loadKnockouts() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     koEvents = data.events || [];
+    koWins = {};
+    koLosses = {};
+    champion = null;
+    const knockoutTeamIds = new Set();
     koEvents.forEach(ev => {
+      const slugForIds = ev.season?.slug || '';
+      if (slugForIds !== 'group-stage') {
+        (ev.competitions?.[0]?.competitors || []).forEach(c => {
+          if (c.team?.id && !String(c.team.id).startsWith('$')) knockoutTeamIds.add(c.team.id);
+        });
+      }
       const comp = ev.competitions?.[0];
       if (!comp || comp.status?.type?.state !== 'post') return;
       const slug = ev.season?.slug || '';
@@ -2221,6 +2343,7 @@ async function loadKnockouts() {
       if (loser?.team?.id) eliminated[loser.team.id] = stageShort(slug);
       if (slug === 'final' && winner?.team?.id) champion = winner.team.id;
     });
+    applyGroupStageEliminations(knockoutTeamIds);
     renderSweeps();
     renderBracket();
   } catch (err) {
@@ -2248,7 +2371,9 @@ function bTeamHtml(c) {
       (t.logo ? '<img class="b-flag" src="' + esc(t.logo) + '" alt="' + esc(t.displayName || '') + ' flag" loading="lazy">'
               : '<span class="b-flag-tbd"></span>') +
       '<span class="b-name">' + esc(t.abbreviation || t.shortDisplayName || t.displayName || '?') + '</span>' +
-      (c.score != null && c.score !== '' ? '<span class="b-score">' + esc(c.score) + '</span>' : '') +
+      (c.score != null && c.score !== '' ? '<span class="b-score">' + esc(c.score) +
+        (competitorPenaltyScore(c) !== '' ? '<span class="b-pen-score">(' + esc(competitorPenaltyScore(c)) + ')</span>' : '') +
+        '</span>' : '') +
     '</div>' +
     (chips ? '<div class="b-team-chips">' + chips + '</div>' : '') +
   '</div>';
@@ -2267,6 +2392,7 @@ function bCellHtml(ev) {
   const home = comps[0], away = comps[1];
   return '<div class="b-cell' + (state === 'in' ? ' b-live' : '') + '">' +
     bTeamHtml(home) + bTeamHtml(away) +
+    shootoutSummaryHtmlFromCompetition(comp, 'bracket') +
   '</div>';
 }
 
