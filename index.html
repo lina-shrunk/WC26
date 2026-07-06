@@ -1845,6 +1845,7 @@ function setTab(which) {
   if (which === 'bracket') loadKnockouts();
   if (which === 'Awards') {
     if (!standingsData) loadStandings();
+    loadKnockouts();   // populate knockout eliminations so the Punchin' lock can bound alive teams
     loadAwards();
   }
   if (which === 'Polls') {
@@ -3228,6 +3229,44 @@ function awardsCompleted() {
     .sort((x, y) => new Date(x.date) - new Date(y.date) || (x.id > y.id ? 1 : -1));
 }
 
+/* Largest FIFA-ranking upset gap that is STILL achievable in the remainder of
+   the tournament — used to decide when the Punchin' award can stop being
+   "preliminary". For a game to beat the current leader, the lower-ranked side
+   must win, so the biggest possible gap in a fixture is |rankA - rankB|.
+     - Remaining GROUP games: teams are known, so we read the exact gap.
+     - Remaining KNOCKOUT games: competitors are still placeholders (no rank),
+       so we bound them by the still-alive teams — the theoretical worst case is
+       the lowest-ranked survivor beating the highest-ranked survivor. This
+       ignores bracket reachability, so it's a safe OVER-estimate: it will only
+       ever let the award lock LATER than strictly necessary, never too early.
+   Unranked teams (rank 999) are excluded, matching the upset filter itself. */
+function maxRemainingUpsetGap() {
+  if ((!FIFA_RANK_BY_ID || !Object.keys(FIFA_RANK_BY_ID).length) &&
+      Object.keys(teamIndex).length) buildRankIndex();
+  let maxGap = 0, knockoutPending = false;
+  (awardsEvents || []).forEach(ev => {
+    const comp = ev.competitions?.[0]; if (!comp) return;
+    if (comp.status?.type?.state === 'post') return;   // already played
+    const cs = comp.competitors || [];
+    if ((ev.season?.slug || '') === 'group-stage') {
+      const ra = rankOf(cs[0]?.team?.id), rb = rankOf(cs[1]?.team?.id);
+      if (ra < 900 && rb < 900) maxGap = Math.max(maxGap, Math.abs(ra - rb));
+    } else {
+      knockoutPending = true;   // teams not yet resolved — bound below
+    }
+  });
+  if (knockoutPending) {
+    const aliveRanks = Object.keys(FIFA_RANK_BY_ID || {})
+      .filter(id => !eliminated[id])
+      .map(id => FIFA_RANK_BY_ID[id])
+      .filter(r => r < 900);
+    if (aliveRanks.length >= 2) {
+      maxGap = Math.max(maxGap, Math.max(...aliveRanks) - Math.min(...aliveRanks));
+    }
+  }
+  return maxGap;
+}
+
 /* Cumulative goals for/against per team up to (and including) a given day —
    used for the Shared Team second-team tie-break. */
 function teamCumulativeUpTo(dateIso) {
@@ -3845,6 +3884,12 @@ function computeAwards() {
     punchAward.awarded = true;
     punchAward.detail = punch.m.label + ' — ' + fmtDay(punch.m.date) + ' (rank gap ' + punch.diff + ')';
     punchAward.groups = withResolved([{ teamId: punch.m.winner.team?.id, date: punch.m.date }], 'punch');
+    // Lock it in once no remaining game can even match the current gap. Strict
+    // '<' so an equal-gap upset (which could overtake on tie-breaks) keeps it open.
+    if (maxRemainingUpsetGap() < punch.diff) {
+      punchAward.preliminary = false;
+      punchAward.prelimNote = undefined;
+    }
   }
 
   // Biggest Loser — heaviest defeat; tie-break: margin, then fewest goals by loser
