@@ -3526,16 +3526,26 @@ function gamePolls() {
   });
 }
 
-/* Score-prediction block for a game poll. Each tip is stored as its own vote
-   under "score:<pollid>" (value "H-A"), so it rides the existing sync with no
-   backend change and stays out of the winner tally/leaderboard. For a knockout
-   game tipped level after 90', the advancing side is taken from the voter's
-   existing winner pick above (no separate penalty control needed). */
+/* Score tips are stored as their own vote under "score:<pollid>". IMPORTANT:
+   the value is encoded "h<H>a<A>" (e.g. "h2a1"), NOT "2-1". A plain "2-1" gets
+   written into the Google Sheet and auto-converted to a DATE (1 Feb), so it
+   reads back as garbage and the tip vanishes / friends can't see it. The h/a
+   form starts with a letter, so the Sheet always keeps it as text. */
+function parseScore(s) {
+  let m = /^h(\d+)a(\d+)$/.exec(s || '');       // current text-safe form
+  if (!m) m = /^(\d+)-(\d+)$/.exec(s || '');    // legacy form, still readable
+  return m ? [Number(m[1]), Number(m[2])] : null;
+}
+function encodeScore(h, a) { return 'h' + h + 'a' + a; }
+function fmtScore(s) { const p = parseScore(s); return p ? p[0] + '–' + p[1] : ''; }
+
+/* Score-prediction block for a game poll. For a knockout game tipped level after
+   90', the advancing side is taken from the voter's existing winner pick above. */
 function scoreSectionHtml(p, voter) {
   const sv = votes['score:' + p.id] || {};
   const mine = voter ? sv[voter] : null;
-  const mm = /^(\d+)-(\d+)$/.exec(mine || '');
-  const hv = mm ? mm[1] : '', av = mm ? mm[2] : '';
+  const ps = parseScore(mine);
+  const hv = ps ? ps[0] : '', av = ps ? ps[1] : '';
   const dis = p.locked ? ' disabled' : '';
   // Home is the first option, away the last (Draw sits between them for group games).
   const homeOpt = p.options[0], awayOpt = p.options[p.options.length - 1];
@@ -3543,7 +3553,7 @@ function scoreSectionHtml(p, voter) {
     (o && o.logo ? '<img class="score-flag" src="' + esc(o.logo) + '" alt="" loading="lazy">' : '') +
     esc(o ? o.label : '') + '</span>';
   let note = '';
-  if (p.ko && mm && mm[1] === mm[2]) {
+  if (p.ko && ps && ps[0] === ps[1]) {
     const adv = voter ? (votes[p.id] || {})[voter] : null;
     const advOk = adv && !/(Winner|Loser|Runner|Place)/i.test(adv);
     note = '<div class="poll-score-note">Level after 90\u2032 \u2014 extra time / penalties; advances: <strong>' +
@@ -3563,7 +3573,7 @@ function scoreSectionHtml(p, voter) {
 /* Number of valid scoreline tips on a game poll (used to show the expand hint
    even when nobody has picked a winner yet). */
 function scoreTipCount(p) {
-  return Object.values(votes['score:' + p.id] || {}).filter(s => /^\d+-\d+$/.test(s || '')).length;
+  return Object.values(votes['score:' + p.id] || {}).filter(s => parseScore(s)).length;
 }
 
 /* Per-person "who tipped what score" breakdown, shown in the card's expansion. */
@@ -3571,16 +3581,16 @@ function scoreWhoHtml(p) {
   const sv = votes['score:' + p.id] || {};
   const byScore = {};
   Object.keys(sv).forEach(voter => {
-    const s = sv[voter];
-    if (!/^\d+-\d+$/.test(s || '')) return;
-    (byScore[s] = byScore[s] || []).push(voter);
+    const f = fmtScore(sv[voter]);   // canonical "H\u2013A", ignores junk/coerced values
+    if (!f) return;
+    (byScore[f] = byScore[f] || []).push(voter);
   });
   const keys = Object.keys(byScore).sort((a, b) => byScore[b].length - byScore[a].length || a.localeCompare(b));
   if (!keys.length) return '';
   return '<div class="poll-score-who"><div class="poll-score-who-h">Score tips</div>' +
     keys.map(k =>
       '<div class="poll-who-row">' +
-        '<span class="poll-who-team">' + esc(k.replace('-', '\u2013')) + '</span>' +
+        '<span class="poll-who-team">' + esc(k) + '</span>' +
         '<span class="poll-who-names">' +
           byScore[k].slice().sort((a, b) => a.localeCompare(b))
             .map(n => '<span class="poll-who-chip">' + esc(n) + '</span>').join('') +
@@ -3772,7 +3782,7 @@ pollsWrapEl.addEventListener('click', (e) => {
     const aIn = card.querySelector('.score-in[data-side="a"]');
     const h = hIn ? hIn.value.trim() : '', a = aIn ? aIn.value.trim() : '';
     if (h === '' || a === '' || isNaN(Number(h)) || isNaN(Number(a))) { if (hIn) hIn.focus(); return; }
-    castVote('score:' + poll, voter, Math.max(0, Math.floor(Number(h))) + '-' + Math.max(0, Math.floor(Number(a))));
+    castVote('score:' + poll, voter, encodeScore(Math.max(0, Math.floor(Number(h))), Math.max(0, Math.floor(Number(a)))));
     return;
   }
   const btn = e.target.closest('.poll-btn');
