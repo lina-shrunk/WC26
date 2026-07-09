@@ -759,6 +759,8 @@
   .poll-score-note { font-size: 12px; color: var(--muted); margin-top: 5px; }
   .poll-score-note strong { color: var(--pitch); }
   .poll-scores-agg { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .poll-score-who { margin-top: 10px; }
+  .poll-score-who-h { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
 
   /* Polls */
   .poll-voter {
@@ -3535,6 +3537,35 @@ function scoreSectionHtml(p, voter) {
       (p.locked ? '' : '<button class="score-save" data-poll="' + esc(p.id) + '">' + (mine ? 'Update' : 'Save') + '</button>') +
     '</div>' + note + agg;
 }
+
+/* Number of valid scoreline tips on a game poll (used to show the expand hint
+   even when nobody has picked a winner yet). */
+function scoreTipCount(p) {
+  return Object.values(votes['score:' + p.id] || {}).filter(s => /^\d+-\d+$/.test(s || '')).length;
+}
+
+/* Per-person "who tipped what score" breakdown, shown in the card's expansion. */
+function scoreWhoHtml(p) {
+  const sv = votes['score:' + p.id] || {};
+  const byScore = {};
+  Object.keys(sv).forEach(voter => {
+    const s = sv[voter];
+    if (!/^\d+-\d+$/.test(s || '')) return;
+    (byScore[s] = byScore[s] || []).push(voter);
+  });
+  const keys = Object.keys(byScore).sort((a, b) => byScore[b].length - byScore[a].length || a.localeCompare(b));
+  if (!keys.length) return '';
+  return '<div class="poll-score-who"><div class="poll-score-who-h">Score tips</div>' +
+    keys.map(k =>
+      '<div class="poll-who-row">' +
+        '<span class="poll-who-team">' + esc(k.replace('-', '\u2013')) + '</span>' +
+        '<span class="poll-who-names">' +
+          byScore[k].slice().sort((a, b) => a.localeCompare(b))
+            .map(n => '<span class="poll-who-chip">' + esc(n) + '</span>').join('') +
+        '</span>' +
+      '</div>').join('') +
+  '</div>';
+}
 function gameLockedById(pollId) {
   const id = pollId.replace(/^game:/, '');
   const ev = (awardsEvents || []).find(e => String(e.id) === id);
@@ -3679,8 +3710,8 @@ function renderPolls() {
         scoreSectionHtml(p, voterName) +
         '<div class="poll-results">' + barsHtml(pollTally(v), myChoice, logoFn) + '</div>' +
         totalLine(v) +
-        (total ? '<div class="poll-who-hint">' + (expanded ? 'Tap to hide who voted' : 'Tap to see who voted') + '</div>' : '') +
-        (expanded ? '<div class="poll-who">' + whoVotedHtml(v, p.options.map(o => o.value), logoFn) + '</div>' : '') +
+        ((total || scoreTipCount(p)) ? '<div class="poll-who-hint">' + (expanded ? 'Tap to hide who voted' : 'Tap to see who voted') + '</div>' : '') +
+        (expanded ? '<div class="poll-who">' + (total ? whoVotedHtml(v, p.options.map(o => o.value), logoFn) : '') + scoreWhoHtml(p) + '</div>' : '') +
       '</div>';
     });
   }
