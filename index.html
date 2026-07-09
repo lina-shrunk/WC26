@@ -748,11 +748,12 @@
   }
   .pred-in:focus { outline: none; border-color: var(--pitch); }
   /* Per-game score tip */
-  .poll-score { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--muted); }
-  .poll-score .score-in { width: 44px; }
+  .poll-score-cap { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 10px 0 4px; }
+  .poll-score { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; font-size: 12px; color: var(--muted); }
+  .poll-score .score-in { width: 40px; }
   .score-save {
     background: rgba(47,191,113,0.14); border: 1px solid var(--pitch); color: var(--pitch);
-    border-radius: 7px; padding: 5px 10px; font-family: inherit; font-size: 13px; cursor: pointer;
+    border-radius: 7px; padding: 5px 8px; font-family: inherit; font-size: 12px; cursor: pointer;
   }
   .score-save:hover { background: rgba(47,191,113,0.24); }
   .score-save:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
@@ -760,7 +761,7 @@
   .poll-score-note strong { color: var(--pitch); }
   .score-lead { margin-right: 2px; }
   .score-side { display: inline-flex; align-items: center; gap: 5px; }
-  .score-team { display: inline-flex; align-items: center; gap: 4px; color: var(--text); font-size: 13px; white-space: nowrap; }
+  .score-team { display: inline-flex; align-items: center; gap: 3px; color: var(--text); font-size: 12px; white-space: nowrap; }
   .score-flag { width: 18px; height: 18px; object-fit: contain; }
   .score-dash { color: var(--muted); }
   .poll-score-who { margin-top: 10px; }
@@ -3395,9 +3396,12 @@ const POLL_GAME_LIMIT = 16;   // how many upcoming fixtures to open polls for
 let votes = store.get('wc26.votes', {});            // { pollId: { voter: choice } }
 let voterName = store.get('wc26.voterName', '');
 if (!votes || typeof votes !== 'object') votes = {};
-/* Local picks awaiting server confirmation: key "poll\0voter" -> {choice, ts}.
-   Stops a stale (not-yet-synced) server read from reverting a just-made pick. */
-let pendingVotes = {};
+/* Your own picks awaiting server confirmation: key "poll voter" -> {choice}.
+   Persisted and kept until the sheet echoes the same value back, so your own
+   tips never vanish from your screen even if the sheet is slow to store them. */
+let pendingVotes = store.get('wc26.pendingVotes', {});
+if (!pendingVotes || typeof pendingVotes !== 'object') pendingVotes = {};
+let voteConfirmTimer = null;   // quick re-check after a vote to catch a dropped write
 
 function teamNameList() {
   const ids = Object.keys(teamIndex);
@@ -3420,14 +3424,18 @@ async function loadVotes() {
       votes = data.votes || data;
       // Overlay recent local picks the server hasn't echoed back yet, so a
       // just-changed tip isn't reverted; drop each once confirmed (or after 60s).
-      const now = Date.now();
       Object.keys(pendingVotes).forEach(k => {
-        const { choice, ts } = pendingVotes[k];
+        const { choice } = pendingVotes[k];
         const i = k.indexOf(' ');
         const poll = k.slice(0, i), voter = k.slice(i + 1);
-        if ((votes[poll] || {})[voter] === choice || now - ts > 60000) { delete pendingVotes[k]; return; }
-        (votes[poll] = votes[poll] || {})[voter] = choice;
+        if ((votes[poll] || {})[voter] === choice) { delete pendingVotes[k]; return; }
+        (votes[poll] = votes[poll] || {})[voter] = choice;   // keep your own pick visible until the sheet confirms it
+        // Fire-and-forget POSTs can silently drop; re-send an unconfirmed write
+        // (bounded) so a change can't get stuck showing locally but missing server-side.
+        pendingVotes[k].tries = (pendingVotes[k].tries || 0) + 1;
+        if (pendingVotes[k].tries <= 5) pushPrediction({ type: 'vote', poll: poll, voter: voter, choice: choice });
       });
+      store.set('wc26.pendingVotes', pendingVotes);
       store.set('wc26.votes', votes);
       // Don't rebuild the poll list while someone is typing in a score box.
       const ae = document.activeElement;
@@ -3438,10 +3446,15 @@ async function loadVotes() {
 function castVote(poll, voter, choice) {
   votes[poll] = votes[poll] || {};
   votes[poll][voter] = choice;
-  pendingVotes[poll + ' ' + voter] = { choice: choice, ts: Date.now() };
+  pendingVotes[poll + ' ' + voter] = { choice: choice };
+  store.set('wc26.pendingVotes', pendingVotes);
   store.set('wc26.votes', votes);
   pushPrediction({ type: 'vote', poll: poll, voter: voter, choice: choice });
   renderPolls();
+  // Re-check soon so a dropped write is caught and re-sent without waiting for
+  // the full refresh cycle.
+  clearTimeout(voteConfirmTimer);
+  voteConfirmTimer = setTimeout(loadVotes, 4000);
 }
 
 function pollTally(v) {
@@ -3513,9 +3526,9 @@ function gamePolls() {
     const a = cs.find(c => c.homeAway === 'away') || cs[1];
     const state = comp.status?.type?.state;
     const ko = (ev.season?.slug || '') !== 'group-stage';
-    const opts = [{ value: h.team.displayName, label: h.team.shortDisplayName || h.team.displayName, logo: h.team.logo || '' }];
+    const opts = [{ value: h.team.displayName, label: h.team.shortDisplayName || h.team.displayName, logo: h.team.logo || '', abbr: h.team.abbreviation || h.team.shortDisplayName || h.team.displayName }];
     if (!ko) opts.push({ value: 'Draw', label: 'Draw', logo: '' });
-    opts.push({ value: a.team.displayName, label: a.team.shortDisplayName || a.team.displayName, logo: a.team.logo || '' });
+    opts.push({ value: a.team.displayName, label: a.team.shortDisplayName || a.team.displayName, logo: a.team.logo || '', abbr: a.team.abbreviation || a.team.shortDisplayName || a.team.displayName });
     return {
       id: 'game:' + ev.id,
       title: h.team.displayName + ' v ' + a.team.displayName,
@@ -3551,7 +3564,7 @@ function scoreSectionHtml(p, voter) {
   const homeOpt = p.options[0], awayOpt = p.options[p.options.length - 1];
   const teamTag = (o) => '<span class="score-team">' +
     (o && o.logo ? '<img class="score-flag" src="' + esc(o.logo) + '" alt="" loading="lazy">' : '') +
-    esc(o ? o.label : '') + '</span>';
+    esc(o ? (o.abbr || o.label) : '') + '</span>';   // 3-letter code keeps the row on one line
   let note = '';
   if (p.ko && ps && ps[0] === ps[1]) {
     const adv = voter ? (votes[p.id] || {})[voter] : null;
@@ -3559,8 +3572,8 @@ function scoreSectionHtml(p, voter) {
     note = '<div class="poll-score-note">Level after 90\u2032 \u2014 extra time / penalties; advances: <strong>' +
       esc(advOk ? adv : 'pick a winner above') + '</strong></div>';
   }
-  return '<div class="poll-score">' +
-      '<span class="score-lead">' + (p.locked ? 'Predicted score:' : 'Tip the score:') + '</span>' +
+  return '<div class="poll-score-cap">' + (p.locked ? 'Predicted score' : 'Tip the score') + '</div>' +
+    '<div class="poll-score">' +
       '<span class="score-side">' + teamTag(homeOpt) +
         '<input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="h" value="' + esc(hv) + '"' + dis + '></span>' +
       '<span class="score-dash">\u2013</span>' +
