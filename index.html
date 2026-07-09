@@ -758,7 +758,11 @@
   .score-save:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
   .poll-score-note { font-size: 12px; color: var(--muted); margin-top: 5px; }
   .poll-score-note strong { color: var(--pitch); }
-  .poll-scores-agg { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .score-lead { margin-right: 2px; }
+  .score-side { display: inline-flex; align-items: center; gap: 5px; }
+  .score-team { display: inline-flex; align-items: center; gap: 4px; color: var(--text); font-size: 13px; white-space: nowrap; }
+  .score-flag { width: 18px; height: 18px; object-fit: contain; }
+  .score-dash { color: var(--muted); }
   .poll-score-who { margin-top: 10px; }
   .poll-score-who-h { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
 
@@ -1616,7 +1620,7 @@ async function load() {
     updateCountdown();
     scheduleNext(hasLive);
     if (currentTab === 'Awards') { refreshLiveScorers(); scanCompletedScorers(); }
-    if (currentTab === 'Polls') renderPolls();
+    if (currentTab === 'Polls') loadVotes();   // pull others' new/changed tips without a manual refresh
   } catch (err) {
     content.innerHTML = '<div class="error-box">Could not load scores (' + esc(err.message) +
       '). The feed may be briefly unavailable — it will retry automatically, or hit Refresh.</div>';
@@ -3391,6 +3395,9 @@ const POLL_GAME_LIMIT = 16;   // how many upcoming fixtures to open polls for
 let votes = store.get('wc26.votes', {});            // { pollId: { voter: choice } }
 let voterName = store.get('wc26.voterName', '');
 if (!votes || typeof votes !== 'object') votes = {};
+/* Local picks awaiting server confirmation: key "poll\0voter" -> {choice, ts}.
+   Stops a stale (not-yet-synced) server read from reverting a just-made pick. */
+let pendingVotes = {};
 
 function teamNameList() {
   const ids = Object.keys(teamIndex);
@@ -3411,14 +3418,27 @@ async function loadVotes() {
     const data = await res.json();
     if (data && typeof data === 'object') {
       votes = data.votes || data;
+      // Overlay recent local picks the server hasn't echoed back yet, so a
+      // just-changed tip isn't reverted; drop each once confirmed (or after 60s).
+      const now = Date.now();
+      Object.keys(pendingVotes).forEach(k => {
+        const { choice, ts } = pendingVotes[k];
+        const i = k.indexOf(' ');
+        const poll = k.slice(0, i), voter = k.slice(i + 1);
+        if ((votes[poll] || {})[voter] === choice || now - ts > 60000) { delete pendingVotes[k]; return; }
+        (votes[poll] = votes[poll] || {})[voter] = choice;
+      });
       store.set('wc26.votes', votes);
-      renderPolls();
+      // Don't rebuild the poll list while someone is typing in a score box.
+      const ae = document.activeElement;
+      if (!(ae && ae.classList && ae.classList.contains('score-in'))) renderPolls();
     }
   } catch (e) { /* keep the localStorage copy */ }
 }
 function castVote(poll, voter, choice) {
   votes[poll] = votes[poll] || {};
   votes[poll][voter] = choice;
+  pendingVotes[poll + ' ' + voter] = { choice: choice, ts: Date.now() };
   store.set('wc26.votes', votes);
   pushPrediction({ type: 'vote', poll: poll, voter: voter, choice: choice });
   renderPolls();
@@ -3517,13 +3537,11 @@ function scoreSectionHtml(p, voter) {
   const mm = /^(\d+)-(\d+)$/.exec(mine || '');
   const hv = mm ? mm[1] : '', av = mm ? mm[2] : '';
   const dis = p.locked ? ' disabled' : '';
-  const tally = {};
-  Object.values(sv).forEach(s => { if (/^\d+-\d+$/.test(s || '')) tally[s] = (tally[s] || 0) + 1; });
-  const aggKeys = Object.keys(tally).sort((a, b) => tally[b] - tally[a] || a.localeCompare(b));
-  const agg = aggKeys.length
-    ? '<div class="poll-scores-agg">Predicted scores: ' +
-        aggKeys.map(k => esc(k.replace('-', '\u2013')) + ' \u00d7' + tally[k]).join(' \u00b7 ') + '</div>'
-    : '';
+  // Home is the first option, away the last (Draw sits between them for group games).
+  const homeOpt = p.options[0], awayOpt = p.options[p.options.length - 1];
+  const teamTag = (o) => '<span class="score-team">' +
+    (o && o.logo ? '<img class="score-flag" src="' + esc(o.logo) + '" alt="" loading="lazy">' : '') +
+    esc(o ? o.label : '') + '</span>';
   let note = '';
   if (p.ko && mm && mm[1] === mm[2]) {
     const adv = voter ? (votes[p.id] || {})[voter] : null;
@@ -3531,11 +3549,15 @@ function scoreSectionHtml(p, voter) {
     note = '<div class="poll-score-note">Level after 90\u2032 \u2014 extra time / penalties; advances: <strong>' +
       esc(advOk ? adv : 'pick a winner above') + '</strong></div>';
   }
-  return '<div class="poll-score">' + (p.locked ? 'Predicted score: ' : 'Tip the score: ') +
-      '<input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="h" value="' + esc(hv) + '"' + dis + '> \u2013 ' +
-      '<input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="a" value="' + esc(av) + '"' + dis + '>' +
+  return '<div class="poll-score">' +
+      '<span class="score-lead">' + (p.locked ? 'Predicted score:' : 'Tip the score:') + '</span>' +
+      '<span class="score-side">' + teamTag(homeOpt) +
+        '<input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="h" value="' + esc(hv) + '"' + dis + '></span>' +
+      '<span class="score-dash">\u2013</span>' +
+      '<span class="score-side"><input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="a" value="' + esc(av) + '"' + dis + '>' +
+        teamTag(awayOpt) + '</span>' +
       (p.locked ? '' : '<button class="score-save" data-poll="' + esc(p.id) + '">' + (mine ? 'Update' : 'Save') + '</button>') +
-    '</div>' + note + agg;
+    '</div>' + note;
 }
 
 /* Number of valid scoreline tips on a game poll (used to show the expand hint
