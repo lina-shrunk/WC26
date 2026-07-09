@@ -747,6 +747,18 @@
     font-variant-numeric: tabular-nums;
   }
   .pred-in:focus { outline: none; border-color: var(--pitch); }
+  /* Per-game score tip */
+  .poll-score { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .poll-score .score-in { width: 44px; }
+  .score-save {
+    background: rgba(47,191,113,0.14); border: 1px solid var(--pitch); color: var(--pitch);
+    border-radius: 7px; padding: 5px 10px; font-family: inherit; font-size: 13px; cursor: pointer;
+  }
+  .score-save:hover { background: rgba(47,191,113,0.24); }
+  .score-save:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
+  .poll-score-note { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .poll-score-note strong { color: var(--pitch); }
+  .poll-scores-agg { font-size: 12px; color: var(--muted); margin-top: 5px; }
 
   /* Polls */
   .poll-voter {
@@ -3486,9 +3498,42 @@ function gamePolls() {
       id: 'game:' + ev.id,
       title: h.team.displayName + ' v ' + a.team.displayName,
       when: fmtDay(ev.date) + ' \u00b7 ' + fmtKickoff(ev.date),
-      options: opts, locked: state !== 'pre'
+      options: opts, locked: state !== 'pre',
+      ko: ko, home: h.team.displayName, away: a.team.displayName
     };
   });
+}
+
+/* Score-prediction block for a game poll. Each tip is stored as its own vote
+   under "score:<pollid>" (value "H-A"), so it rides the existing sync with no
+   backend change and stays out of the winner tally/leaderboard. For a knockout
+   game tipped level after 90', the advancing side is taken from the voter's
+   existing winner pick above (no separate penalty control needed). */
+function scoreSectionHtml(p, voter) {
+  const sv = votes['score:' + p.id] || {};
+  const mine = voter ? sv[voter] : null;
+  const mm = /^(\d+)-(\d+)$/.exec(mine || '');
+  const hv = mm ? mm[1] : '', av = mm ? mm[2] : '';
+  const dis = p.locked ? ' disabled' : '';
+  const tally = {};
+  Object.values(sv).forEach(s => { if (/^\d+-\d+$/.test(s || '')) tally[s] = (tally[s] || 0) + 1; });
+  const aggKeys = Object.keys(tally).sort((a, b) => tally[b] - tally[a] || a.localeCompare(b));
+  const agg = aggKeys.length
+    ? '<div class="poll-scores-agg">Predicted scores: ' +
+        aggKeys.map(k => esc(k.replace('-', '\u2013')) + ' \u00d7' + tally[k]).join(' \u00b7 ') + '</div>'
+    : '';
+  let note = '';
+  if (p.ko && mm && mm[1] === mm[2]) {
+    const adv = voter ? (votes[p.id] || {})[voter] : null;
+    const advOk = adv && !/(Winner|Runner|Place)/i.test(adv);
+    note = '<div class="poll-score-note">Level after 90\u2032 \u2014 extra time / penalties; advances: <strong>' +
+      esc(advOk ? adv : 'pick a winner above') + '</strong></div>';
+  }
+  return '<div class="poll-score">' + (p.locked ? 'Predicted score: ' : 'Tip the score: ') +
+      '<input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="h" value="' + esc(hv) + '"' + dis + '> \u2013 ' +
+      '<input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="a" value="' + esc(av) + '"' + dis + '>' +
+      (p.locked ? '' : '<button class="score-save" data-poll="' + esc(p.id) + '">' + (mine ? 'Update' : 'Save') + '</button>') +
+    '</div>' + note + agg;
 }
 function gameLockedById(pollId) {
   const id = pollId.replace(/^game:/, '');
@@ -3631,6 +3676,7 @@ function renderPolls() {
         '<div class="poll-when">' + esc(p.when) + '</div>' +
         controls +
         (myChoice ? '<div class="poll-mychoice">Your pick: <strong>' + esc(myChoice) + '</strong></div>' : '') +
+        scoreSectionHtml(p, voterName) +
         '<div class="poll-results">' + barsHtml(pollTally(v), myChoice, logoFn) + '</div>' +
         totalLine(v) +
         (total ? '<div class="poll-who-hint">' + (expanded ? 'Tap to hide who voted' : 'Tap to see who voted') + '</div>' : '') +
@@ -3660,6 +3706,22 @@ pollsWrapEl.addEventListener('click', (e) => {
     castVote(opt.dataset.poll, voter, opt.dataset.choice);
     return;
   }
+  const sc = e.target.closest('.score-save');
+  if (sc) {
+    const poll = sc.dataset.poll;
+    if (gameLockedById(poll)) return;   // game already kicked off
+    const vi = document.getElementById('voterInput');
+    const voter = (vi ? vi.value.trim() : voterName);
+    if (!voter) { if (vi) vi.focus(); return; }
+    voterName = voter; store.set('wc26.voterName', voterName);
+    const card = sc.closest('.poll-card');
+    const hIn = card.querySelector('.score-in[data-side="h"]');
+    const aIn = card.querySelector('.score-in[data-side="a"]');
+    const h = hIn ? hIn.value.trim() : '', a = aIn ? aIn.value.trim() : '';
+    if (h === '' || a === '' || isNaN(Number(h)) || isNaN(Number(a))) { if (hIn) hIn.focus(); return; }
+    castVote('score:' + poll, voter, Math.max(0, Math.floor(Number(h))) + '-' + Math.max(0, Math.floor(Number(a))));
+    return;
+  }
   const btn = e.target.closest('.poll-btn');
   if (btn) {
     const poll = btn.dataset.poll;
@@ -3677,7 +3739,7 @@ pollsWrapEl.addEventListener('click', (e) => {
   }
   // Tapping a card (but not its vote controls) toggles the who-voted breakdown
   const card = e.target.closest('.poll-card');
-  if (card && card.dataset.poll && !e.target.closest('select, button, .poll-vote, .poll-opts')) {
+  if (card && card.dataset.poll && !e.target.closest('select, button, .poll-vote, .poll-opts, .poll-score')) {
     const id = card.dataset.poll;
     pollExpanded[id] = !pollExpanded[id];
     renderPolls();
