@@ -3456,6 +3456,13 @@ function barsHtml(tally, myChoice, logoFn) {
   }).join('');
 }
 
+/* A competitor is "real" once its slot holds an actual team. ESPN fills knockout
+   slots with placeholder names like "Round of 16 5 Winner" / "Group A Winner"
+   until the feeding match resolves. We only open a poll once BOTH sides are real,
+   so nobody can tip a placeholder (which would freeze that label into the vote). */
+function isRealTeam(t) {
+  return !!(t && t.id && !/(Winner|Runner|Place)/i.test(t.displayName || ''));
+}
 /* Upcoming (and in-progress) fixtures become "who wins this game?" polls */
 function gamePolls() {
   return (awardsEvents || []).filter(e => {
@@ -3463,7 +3470,7 @@ function gamePolls() {
     const cs = e.competitions?.[0]?.competitors || [];
     const h = cs.find(c => c.homeAway === 'home') || cs[0];
     const a = cs.find(c => c.homeAway === 'away') || cs[1];
-    return (st === 'pre' || st === 'in') && h?.team?.id && a?.team?.id;
+    return (st === 'pre' || st === 'in') && isRealTeam(h?.team) && isRealTeam(a?.team);
   }).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, POLL_GAME_LIMIT)
   .map(ev => {
     const comp = ev.competitions[0];
@@ -3499,6 +3506,15 @@ function gameOutcome(ev) {
   const w = cs.find(c => c.winner === true);
   return w ? (w.team?.displayName || null) : 'Draw';
 }
+/* Valid vote values for a fixture as it stands now: the two real team names
+   (plus Draw for group games). Used to ignore stale placeholder picks. */
+function validPollChoices(ev) {
+  const cs = ev?.competitions?.[0]?.competitors || [];
+  const set = new Set();
+  cs.forEach(c => { if (c.team?.displayName) set.add(c.team.displayName); });
+  if ((ev?.season?.slug || '') === 'group-stage') set.add('Draw');
+  return set;
+}
 function pollLeaderboard() {
   const matches = {};
   mergedMatches().forEach(e => { matches[e.id] = e; });
@@ -3508,10 +3524,11 @@ function pollLeaderboard() {
     const ev = matches[pollId.slice(5)];
     const outcome = ev ? gameOutcome(ev) : null;
     if (!outcome) return;                               // game not finished / unknown
+    const valid = validPollChoices(ev);
     const v = votes[pollId] || {};
     Object.keys(v).forEach(voter => {
       const choice = v[voter];
-      if (!choice) return;
+      if (!choice || !valid.has(choice)) return;        // ignore stale placeholder picks
       const t = tally[voter] || (tally[voter] = { correct: 0, total: 0 });
       t.total++;
       if (choice === outcome) t.correct++;
@@ -3592,8 +3609,14 @@ function renderPolls() {
     html += '<div class="poll-empty">' + (awardsEvents ? 'No upcoming fixtures to vote on right now.' : 'Loading fixtures…') + '</div>';
   } else {
     gps.forEach(p => {
-      const v = votes[p.id] || {};
-      const myChoice = voterName ? v[voterName] : null;
+      const validSet = new Set(p.options.map(o => o.value));
+      const raw = votes[p.id] || {};
+      // Drop stale votes cast while a side was still a placeholder ("Round of 16
+      // N Winner") — they no longer match a real option, so we hide them from the
+      // results and treat the voter as not having tipped, so they can tip again.
+      const v = {};
+      Object.keys(raw).forEach(voter => { if (validSet.has(raw[voter])) v[voter] = raw[voter]; });
+      const myChoice = voterName && validSet.has(raw[voterName]) ? raw[voterName] : null;
       const logoFn = name => { const o = p.options.find(o => o.value === name); return o ? o.logo : nameLogo(name); };
       const controls = p.locked
         ? '<div class="poll-closed">Voting closed — game has started.</div>'
