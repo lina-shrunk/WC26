@@ -3475,7 +3475,7 @@ function barsHtml(tally, myChoice, logoFn) {
    until the feeding match resolves. We only open a poll once BOTH sides are real,
    so nobody can tip a placeholder (which would freeze that label into the vote). */
 function isRealTeam(t) {
-  return !!(t && t.id && !/(Winner|Runner|Place)/i.test(t.displayName || ''));
+  return !!(t && t.id && !/(Winner|Loser|Runner|Place)/i.test(t.displayName || ''));
 }
 /* Upcoming (and in-progress) fixtures become "who wins this game?" polls */
 function gamePolls() {
@@ -3527,7 +3527,7 @@ function scoreSectionHtml(p, voter) {
   let note = '';
   if (p.ko && mm && mm[1] === mm[2]) {
     const adv = voter ? (votes[p.id] || {})[voter] : null;
-    const advOk = adv && !/(Winner|Runner|Place)/i.test(adv);
+    const advOk = adv && !/(Winner|Loser|Runner|Place)/i.test(adv);
     note = '<div class="poll-score-note">Level after 90\u2032 \u2014 extra time / penalties; advances: <strong>' +
       esc(advOk ? adv : 'pick a winner above') + '</strong></div>';
   }
