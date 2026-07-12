@@ -483,6 +483,41 @@
   .lb-table tr.lb-first td { background: rgba(232,184,75,0.08); }
   .lb-table tr.lb-first .lb-member, .lb-table tr.lb-first .lb-rank { color: var(--gold); }
   .lb-table tr.lb-last .lb-pts { color: var(--live); }
+  .lb-bonus-cell { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; color: var(--muted); }
+  .lb-bonus-cell.pos { color: var(--pitch); }
+  .lb-bonus-cell.neg { color: var(--live); }
+  .lb-bonuses { margin-top: 8px; display: grid; gap: 3px; }
+  .lb-bonus { font-size: 12.5px; color: var(--ink, #dfe8f2); }
+  .lb-bonus.pending { color: var(--muted); }
+  .lb-bonus-label { font-weight: 600; color: var(--pitch); }
+  .lb-bonus-label.neg { color: var(--live); }
+  .lb-bonus.pending .lb-bonus-label { color: var(--muted); }
+  .lb-prelim-tag { color: var(--gold); font-style: italic; font-size: 11.5px; }
+
+  /* Shrunk awards & points system (collapsible) */
+  .rules-box { margin: 10px 0 14px; border: 1px solid rgba(47,191,113,0.3); border-radius: 10px; overflow: hidden; }
+  .rules-toggle {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    background: rgba(47,191,113,0.06); border: none; cursor: pointer; padding: 9px 12px;
+    color: var(--pitch); font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .rules-caret {
+    color: var(--muted); font-size: 12px; letter-spacing: 0.04em; text-transform: none;
+    font-family: Barlow, sans-serif; font-weight: 400;
+  }
+  .rules-body { padding: 10px 12px 12px; display: grid; gap: 11px; }
+  .rules-group-title {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+  }
+  .rules-row { font-size: 13px; color: var(--ink, #dfe8f2); padding: 2px 0; line-height: 1.45; }
+  .rules-pts {
+    display: inline-block; min-width: 36px; font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; color: var(--pitch); font-variant-numeric: tabular-nums;
+  }
+  .rules-pts.neg { color: var(--live); }
+  .rules-note { font-size: 12px; color: var(--muted); line-height: 1.5; }
 
   .sweep-tag.hoogies { color: var(--gold); border: 1px solid rgba(232,184,75,0.45); }
   .sweep-tag.shrunk { color: var(--pitch); border: 1px solid rgba(47,191,113,0.45); }
@@ -748,12 +783,11 @@
   }
   .pred-in:focus { outline: none; border-color: var(--pitch); }
   /* Per-game score tip */
-  .poll-score-cap { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 10px 0 4px; }
-  .poll-score { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; font-size: 12px; color: var(--muted); }
-  .poll-score .score-in { width: 40px; }
+  .poll-score { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .poll-score .score-in { width: 44px; }
   .score-save {
     background: rgba(47,191,113,0.14); border: 1px solid var(--pitch); color: var(--pitch);
-    border-radius: 7px; padding: 5px 8px; font-family: inherit; font-size: 12px; cursor: pointer;
+    border-radius: 7px; padding: 5px 10px; font-family: inherit; font-size: 13px; cursor: pointer;
   }
   .score-save:hover { background: rgba(47,191,113,0.24); }
   .score-save:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
@@ -761,7 +795,7 @@
   .poll-score-note strong { color: var(--pitch); }
   .score-lead { margin-right: 2px; }
   .score-side { display: inline-flex; align-items: center; gap: 5px; }
-  .score-team { display: inline-flex; align-items: center; gap: 3px; color: var(--text); font-size: 12px; white-space: nowrap; }
+  .score-team { display: inline-flex; align-items: center; gap: 4px; color: var(--text); font-size: 13px; white-space: nowrap; }
   .score-flag { width: 18px; height: 18px; object-fit: contain; }
   .score-dash { color: var(--muted); }
   .poll-score-who { margin-top: 10px; }
@@ -2092,6 +2126,15 @@ let eliminated = {};           // teamId -> 'R32' | 'R16' | 'QF' | 'SF' | 'F'
 let koWins = {};               // teamId -> knockout wins (incl. 3rd place match)
 let koLosses = {};             // teamId -> knockout losses
 let champion = null;
+let runnerUp = null;           // teamId of the losing finalist
+let finalists = [];            // both finalist teamIds once the final pairing is set
+let elimDate = {};             // teamId -> kickoff date of the match that knocked them out
+let koGd = {};                 // teamId -> goal difference across knockout games (incl. 3rd place)
+let koGf = {};                 // teamId -> goals scored in knockout games
+let koGa = {};                 // teamId -> goals conceded in knockout games
+let teamGameLog = [];          // every finished game per team: { id, date, res: 'W'|'D'|'L', g: total goals }
+let matchResults = [];         // every decided match: { winnerId, loserId, goals, shootout, slug, date }
+let thirdPlaceWinner = null;   // teamId of the third-place play-off winner
 let elimsLoaded = false;
 const sweepsMain = document.getElementById('sweepsMain');
 
@@ -2334,14 +2377,25 @@ async function loadKnockouts() {
   if (elimsLoaded) { renderBracket(); return; }
   elimsLoaded = true;   // attempt once per page load
   try {
-    // Knockout rounds run 28 June – 19 July (ET pages; +1 day buffer for safety)
-    const res = await fetch(BASE_URL + '?dates=20260628-20260720&limit=400');
+    // Whole tournament, 11 June – 19 July (ET pages; +1 day buffer). Group games
+    // are needed too so the "first top-10 team out" bonus can order group exits.
+    const res = await fetch(BASE_URL + '?dates=20260611-20260720&limit=400');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     koEvents = data.events || [];
     koWins = {};
     koLosses = {};
     champion = null;
+    runnerUp = null;
+    finalists = [];
+    elimDate = {};
+    koGd = {};
+    koGf = {};
+    koGa = {};
+    teamGameLog = [];
+    matchResults = [];
+    thirdPlaceWinner = null;
+    const lastGroupGame = {};   // teamId -> date of their latest finished group game
     const knockoutTeamIds = new Set();
     koEvents.forEach(ev => {
       const slugForIds = ev.season?.slug || '';
@@ -2350,20 +2404,76 @@ async function loadKnockouts() {
           if (c.team?.id && !String(c.team.id).startsWith('$')) knockoutTeamIds.add(c.team.id);
         });
       }
+      if (slugForIds === 'final') {
+        const ids = (ev.competitions?.[0]?.competitors || [])
+          .map(c => c.team?.id).filter(id => id && !String(id).startsWith('$'));
+        if (ids.length === 2) finalists = ids;
+      }
       const comp = ev.competitions?.[0];
       if (!comp || comp.status?.type?.state !== 'post') return;
       const slug = ev.season?.slug || '';
-      if (slug === 'group-stage') return;
+      if (slug === 'group-stage') {
+        const gcomps = comp.competitors || [];
+        gcomps.forEach(c => {
+          const id = c.team?.id;
+          if (!id || String(id).startsWith('$')) return;
+          if (!lastGroupGame[id] || new Date(ev.date) > new Date(lastGroupGame[id])) lastGroupGame[id] = ev.date;
+        });
+        const gw = gcomps.find(c => c.winner), gl = gcomps.find(c => c.winner === false || (gw && c !== gw));
+        const gGoals = gcomps.reduce((n, c) => n + (Number(c.score) || 0), 0);
+        if (gw?.team?.id && gl?.team?.id) {
+          matchResults.push({ winnerId: gw.team.id, loserId: gl.team.id, goals: gGoals,
+            margin: Math.abs((Number(gw.score) || 0) - (Number(gl.score) || 0)),
+            shootout: false, slug, date: ev.date });
+          teamGameLog.push({ id: gw.team.id, date: ev.date, res: 'W', g: gGoals });
+          teamGameLog.push({ id: gl.team.id, date: ev.date, res: 'L', g: gGoals });
+        } else if (gcomps.length === 2 && gcomps.every(c => c.team?.id && !String(c.team.id).startsWith('$'))) {
+          gcomps.forEach(c => teamGameLog.push({ id: c.team.id, date: ev.date, res: 'D', g: gGoals }));
+        }
+        return;
+      }
       const comps = comp.competitors || [];
       const loser = comps.find(c => !c.winner);
       const winner = comps.find(c => c.winner);
       if (winner?.team?.id) koWins[winner.team.id] = (koWins[winner.team.id] || 0) + 1;
       if (loser?.team?.id) koLosses[loser.team.id] = (koLosses[loser.team.id] || 0) + 1;
-      if (slug === 'third-place-match') return;   // counts for points, not elimination
-      if (loser?.team?.id) eliminated[loser.team.id] = stageShort(slug);
-      if (slug === 'final' && winner?.team?.id) champion = winner.team.id;
+      // Match-score goal difference (shootouts excluded — c.score is the match score)
+      if (comps.length === 2 && comps.every(c => c.team?.id && c.score != null && c.score !== '')) {
+        const s0 = Number(comps[0].score) || 0, s1 = Number(comps[1].score) || 0;
+        koGd[comps[0].team.id] = (koGd[comps[0].team.id] || 0) + (s0 - s1);
+        koGd[comps[1].team.id] = (koGd[comps[1].team.id] || 0) + (s1 - s0);
+        koGf[comps[0].team.id] = (koGf[comps[0].team.id] || 0) + s0;
+        koGa[comps[0].team.id] = (koGa[comps[0].team.id] || 0) + s1;
+        koGf[comps[1].team.id] = (koGf[comps[1].team.id] || 0) + s1;
+        koGa[comps[1].team.id] = (koGa[comps[1].team.id] || 0) + s0;
+      }
+      if (winner?.team?.id && loser?.team?.id) {
+        const koGoals = comps.reduce((n, c) => n + (Number(c.score) || 0), 0);
+        matchResults.push({ winnerId: winner.team.id, loserId: loser.team.id, goals: koGoals,
+          margin: Math.abs((Number(winner.score) || 0) - (Number(loser.score) || 0)),
+          shootout: comps.some(c => competitorPenaltyScore(c) !== ''), slug, date: ev.date });
+        teamGameLog.push({ id: winner.team.id, date: ev.date, res: 'W', g: koGoals });
+        teamGameLog.push({ id: loser.team.id, date: ev.date, res: 'L', g: koGoals });
+      }
+      if (slug === 'third-place-match') {   // counts for points, not elimination
+        if (winner?.team?.id) thirdPlaceWinner = winner.team.id;
+        return;
+      }
+      if (loser?.team?.id) {
+        eliminated[loser.team.id] = stageShort(slug);
+        elimDate[loser.team.id] = ev.date;
+      }
+      if (slug === 'final') {
+        if (winner?.team?.id) champion = winner.team.id;
+        if (loser?.team?.id) runnerUp = loser.team.id;
+      }
     });
     applyGroupStageEliminations(knockoutTeamIds);
+    // Date a group-stage exit by the team's final group game so "first out" can
+    // be ordered between top-10 teams that both fell in the groups.
+    Object.keys(eliminated).forEach(id => {
+      if (eliminated[id] === 'Group' && !elimDate[id] && lastGroupGame[id]) elimDate[id] = lastGroupGame[id];
+    });
     renderSweeps();
     renderBracket();
   } catch (err) {
@@ -2606,6 +2716,466 @@ function sweepGames(en) {
   return (Number(t.gp) || 0) + (koWins[en.teamId] || 0) + (koLosses[en.teamId] || 0);
 }
 
+/* ---------- Shrunk bonus points ----------
+   +10 owner of the World Cup winners · +5 owner of the runners-up ·
+   +10 underdog run: worst FIFA-ranked team among those that go furthest in the
+       bracket, i.e. the worst-ranked finalist (decided once the final pairing is set) ·
+   −5 owner of the first top-10 team knocked out of the competition.
+   FIFA rank = a team's position in the SHRUNK_DRAW list (1–48, best to worst). */
+const ELIM_ROUND_ORDER = { Group: 0, R32: 1, R16: 2, QF: 3, SF: 4, Final: 5 };
+function shrunkEntryByTeam(teamId) {
+  return sweeps.Shrunk.find(en => en.teamId && en.teamId === teamId) || null;
+}
+function shrunkRank(teamId) {
+  const i = sweeps.Shrunk.findIndex(en => en.teamId && en.teamId === teamId);
+  return i >= 0 ? i + 1 : null;
+}
+function shrunkBonuses() {
+  const byMember = {};
+  const add = (member, pts) => { if (member) byMember[member] = (byMember[member] || 0) + pts; };
+  const items = [];
+  const teamName = id => teamIndex[id]?.name || shrunkEntryByTeam(id)?.teamName || '?';
+
+  // World Cup winners +10
+  const champEn = champion ? shrunkEntryByTeam(champion) : null;
+  if (champEn) {
+    add(champEn.member, 10);
+    items.push({ label: 'World Cup winners +10', text: champEn.member + ' — ' + teamName(champion) });
+  } else {
+    items.push({ label: 'World Cup winners +10', text: 'decided after the final', pending: true });
+  }
+
+  // Runners-up +5
+  const ruEn = runnerUp ? shrunkEntryByTeam(runnerUp) : null;
+  if (ruEn) {
+    add(ruEn.member, 5);
+    items.push({ label: 'Runners-up +5', text: ruEn.member + ' — ' + teamName(runnerUp) });
+  } else {
+    items.push({ label: 'Runners-up +5', text: 'decided after the final', pending: true });
+  }
+
+  // Underdog run +10 — worst-ranked of the two finalists
+  if (finalists.length === 2) {
+    const worse = finalists.slice().sort((a, b) => (shrunkRank(b) || 0) - (shrunkRank(a) || 0))[0];
+    const udEn = shrunkEntryByTeam(worse);
+    if (udEn) {
+      add(udEn.member, 10);
+      items.push({ label: 'Underdog run +10', text: udEn.member + ' — ' + teamName(worse) +
+        ' (FIFA rank ' + shrunkRank(worse) + ', worst-ranked finalist)' });
+    }
+  } else {
+    items.push({ label: 'Underdog run +10',
+      text: 'worst-ranked team in the final — decided once the final pairing is set', pending: true });
+  }
+
+  // First top-10 team out −5 (top 10 = first ten teams in the draw by FIFA rank)
+  const outTop10 = sweeps.Shrunk.slice(0, 10).filter(en => en.teamId && eliminated[en.teamId]);
+  if (outTop10.length) {
+    const keyOf = en => ({
+      ord: ELIM_ROUND_ORDER[eliminated[en.teamId]] ?? 9,
+      ts: elimDate[en.teamId] ? new Date(elimDate[en.teamId]).getTime() : Infinity
+    });
+    let first = [], firstKey = null;
+    outTop10.forEach(en => {
+      const k = keyOf(en);
+      if (!firstKey || k.ord < firstKey.ord || (k.ord === firstKey.ord && k.ts < firstKey.ts)) {
+        first = [en]; firstKey = k;
+      } else if (k.ord === firstKey.ord && k.ts === firstKey.ts) {
+        first.push(en);   // dead heat (same round, same kickoff) — both cop it
+      }
+    });
+    first.forEach(en => {
+      add(en.member, -5);
+      items.push({ label: 'First top-10 team out −5', text: en.member + ' — ' + teamName(en.teamId) +
+        ' (out ' + eliminated[en.teamId] + ')', neg: true });
+    });
+  } else {
+    items.push({ label: 'First top-10 team out −5', text: 'no top-10 team eliminated yet', pending: true });
+  }
+
+  // Goal difference, normalised per game played — total GD across all of a member's
+  // teams divided by the total games those teams have played, so uneven team
+  // counts (10 v 9) and deeper knockout runs don't skew the comparison.
+  // Best +10, worst −5 — preliminary until the tournament is finalised.
+  const gdOf = en => (Number(teamIndex[en.teamId]?.gd) || 0) + (koGd[en.teamId] || 0);
+  const gdTotals = {};   // member -> { gd, games }
+  sweeps.Shrunk.forEach(en => {
+    const t = (gdTotals[en.member] = gdTotals[en.member] || { gd: 0, games: 0 });
+    t.gd += gdOf(en);
+    t.games += sweepGames(en);
+  });
+  const gdNames = Object.keys(gdTotals).filter(k => gdTotals[k].games > 0);
+  const perGame = k => gdTotals[k].gd / gdTotals[k].games;
+  const fmtRate = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2);
+  const fmtGd = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(Math.round(n));
+  const gdText = k => fmtRate(perGame(k)) + ' per game (' + fmtGd(gdTotals[k].gd) + ' over ' + gdTotals[k].games + ' games)';
+  const prelim = !champion;   // finalised once the World Cup has been won
+  if (gdNames.length) {
+    const bestGd = Math.max(...gdNames.map(perGame));
+    const worstGd = Math.min(...gdNames.map(perGame));
+    gdNames.filter(k => Math.abs(perGame(k) - bestGd) < 1e-9).forEach(k => {
+      add(k, 10);
+      items.push({ label: 'Best GD per game +10', text: k + ' — ' + gdText(k), prelim });
+    });
+    gdNames.filter(k => Math.abs(perGame(k) - worstGd) < 1e-9).forEach(k => {
+      add(k, -5);
+      items.push({ label: 'Worst GD per game −5', text: k + ' — ' + gdText(k), prelim, neg: true });
+    });
+  } else {
+    items.push({ label: 'Best GD per game +10', text: 'no games played yet', pending: true });
+    items.push({ label: 'Worst GD per game −5', text: 'no games played yet', pending: true });
+  }
+
+  // Third-place consolation +3
+  const tpEn = thirdPlaceWinner ? shrunkEntryByTeam(thirdPlaceWinner) : null;
+  if (tpEn) {
+    add(tpEn.member, 3);
+    items.push({ label: 'Third-place consolation +3', text: tpEn.member + ' — ' + teamName(thirdPlaceWinner) });
+  } else {
+    items.push({ label: 'Third-place consolation +3', text: 'decided after the third-place play-off', pending: true });
+  }
+
+  // Top Dud +10 — the Dud pick with the most match points (tie-break: knockout wins)
+  const duds = sweeps.Shrunk.filter(en => en.role === 'dud' && en.teamId);
+  if (duds.some(en => sweepGames(en) > 0)) {
+    let top = [], topKey = null;
+    duds.forEach(en => {
+      const k = [sweepPoints(en), koWins[en.teamId] || 0];
+      if (!topKey || k[0] > topKey[0] || (k[0] === topKey[0] && k[1] > topKey[1])) { top = [en]; topKey = k; }
+      else if (k[0] === topKey[0] && k[1] === topKey[1]) top.push(en);
+    });
+    top.forEach(en => {
+      add(en.member, 10);
+      items.push({ label: 'Top Dud +10', text: en.member + ' — ' + teamName(en.teamId) + ' (' + topKey[0] + ' pts)', prelim });
+    });
+  } else {
+    items.push({ label: 'Top Dud +10', text: 'no games played yet', pending: true });
+  }
+
+  // Last Dud standing +5
+  const dudAlive = duds.filter(en => !eliminated[en.teamId]);
+  if (duds.length && dudAlive.length === 1) {
+    add(dudAlive[0].member, 5);
+    items.push({ label: 'Last Dud standing +5', text: dudAlive[0].member + ' — ' + teamName(dudAlive[0].teamId) });
+  } else if (duds.length && dudAlive.length === 0) {
+    // every Dud is out — the latest exit (round order, then kickoff date) takes it
+    let last = [], lastKey = null;
+    duds.forEach(en => {
+      const k = { ord: ELIM_ROUND_ORDER[eliminated[en.teamId]] ?? -1,
+                  ts: elimDate[en.teamId] ? new Date(elimDate[en.teamId]).getTime() : -Infinity };
+      if (!lastKey || k.ord > lastKey.ord || (k.ord === lastKey.ord && k.ts > lastKey.ts)) { last = [en]; lastKey = k; }
+      else if (k.ord === lastKey.ord && k.ts === lastKey.ts) last.push(en);
+    });
+    last.forEach(en => {
+      add(en.member, 5);
+      items.push({ label: 'Last Dud standing +5', text: en.member + ' — ' + teamName(en.teamId) + ' (out ' + eliminated[en.teamId] + ')' });
+    });
+  } else {
+    items.push({ label: 'Last Dud standing +5', text: dudAlive.length + ' Duds still alive', pending: true });
+  }
+
+  // Giant killer +5 per scalp — a Dud beating a top-10 team
+  const top10Ids = new Set(sweeps.Shrunk.slice(0, 10).map(en => en.teamId).filter(Boolean));
+  const kills = {};
+  matchResults.forEach(m => {
+    const wEn = shrunkEntryByTeam(m.winnerId);
+    if (wEn && wEn.role === 'dud' && top10Ids.has(m.loserId)) {
+      (kills[wEn.member] = kills[wEn.member] || []).push(teamName(m.winnerId) + ' beat ' + teamName(m.loserId));
+    }
+  });
+  if (Object.keys(kills).length) {
+    Object.keys(kills).sort().forEach(k => {
+      add(k, 5 * kills[k].length);
+      items.push({ label: 'Giant killer +5 per scalp', text: k + ' +' + (5 * kills[k].length) + ' — ' + kills[k].join(', ') });
+    });
+  } else {
+    items.push({ label: 'Giant killer +5 per scalp', text: 'no Dud has beaten a top-10 team yet', pending: true });
+  }
+
+  // Shootout specialist +3 per win — single winner: the player with the most
+  // shootout wins (ties: first to reach the count, then alphabetical)
+  const soWins = {};
+  matchResults.forEach(m => {
+    if (!m.shootout) return;
+    const wEn = shrunkEntryByTeam(m.winnerId);
+    if (wEn) (soWins[wEn.member] = soWins[wEn.member] || []).push({ name: teamName(m.winnerId), date: m.date });
+  });
+  const soNames = Object.keys(soWins);
+  if (soNames.length) {
+    const lastSoWin = k => Math.max(...soWins[k].map(w => new Date(w.date).getTime()));
+    const soK = soNames.sort((a, b) =>
+      soWins[b].length - soWins[a].length || lastSoWin(a) - lastSoWin(b) || a.localeCompare(b))[0];
+    add(soK, 3 * soWins[soK].length);
+    items.push({ label: 'Shootout specialist +3 per win', text: soK + ' +' + (3 * soWins[soK].length) + ' — ' +
+      soWins[soK].map(w => w.name).join(', '), prelim });
+  } else {
+    items.push({ label: 'Shootout specialist +3 per win', text: 'no shootout wins yet', pending: true });
+  }
+
+  // Biggest upset +5 — largest FIFA-rank gap where the worse-ranked side won
+  let upsets = [], upsetGap = 0;
+  matchResults.forEach(m => {
+    const wr = shrunkRank(m.winnerId), lr = shrunkRank(m.loserId);
+    if (!wr || !lr) return;
+    const gap = wr - lr;   // positive when the worse-ranked team won
+    if (gap > upsetGap) { upsets = [m]; upsetGap = gap; }
+    else if (gap === upsetGap && gap > 0) upsets.push(m);
+  });
+  if (upsets.length) {
+    // Single winner — ties broken by bigger winning margin, then the earlier match
+    const m = upsets.sort((a, b) =>
+      (b.margin || 0) - (a.margin || 0) || new Date(a.date) - new Date(b.date))[0];
+    const en = shrunkEntryByTeam(m.winnerId);
+    if (en) {
+      add(en.member, 5);
+      items.push({ label: 'Biggest upset +5', text: en.member + ' — ' + teamName(m.winnerId) +
+        ' (rank ' + shrunkRank(m.winnerId) + ') beat ' + teamName(m.loserId) + ' (rank ' + shrunkRank(m.loserId) + ')', prelim });
+    }
+  } else {
+    items.push({ label: 'Biggest upset +5', text: 'no upsets yet', pending: true });
+  }
+
+  // Highest-scoring match +7 — owner of the winning team in the biggest goal-fest
+  let goalFests = [], mostGoals = 0;
+  matchResults.forEach(m => {
+    if (m.goals > mostGoals) { goalFests = [m]; mostGoals = m.goals; }
+    else if (m.goals === mostGoals && m.goals > 0) goalFests.push(m);
+  });
+  if (goalFests.length && mostGoals > 0) {
+    goalFests.forEach(m => {
+      const en = shrunkEntryByTeam(m.winnerId);
+      if (!en) return;
+      add(en.member, 7);
+      items.push({ label: 'Highest-scoring match +7', text: en.member + ' — ' + teamName(m.winnerId) +
+        ' won a ' + m.goals + '-goal match v ' + teamName(m.loserId), prelim });
+    });
+  } else {
+    items.push({ label: 'Highest-scoring match +7', text: 'no goals in a decided match yet', pending: true });
+  }
+
+  // Favourite flop −5 — a top-5 team out before the quarter-finals
+  const flopRounds = new Set(['Group', 'R32', 'R16']);
+  const flops = sweeps.Shrunk.slice(0, 5).filter(en => en.teamId && flopRounds.has(eliminated[en.teamId]));
+  if (flops.length) {
+    flops.forEach(en => {
+      add(en.member, -5);
+      items.push({ label: 'Favourite flop −5', text: en.member + ' — ' + teamName(en.teamId) + ' (out ' + eliminated[en.teamId] + ')', neg: true });
+    });
+  } else {
+    items.push({ label: 'Favourite flop −5', text: 'no top-5 team out before the quarter-finals', pending: true });
+  }
+
+  // Group-stage embarrassment −2 — a Best pick knocked out in the groups
+  const groupsDone = Object.values(eliminated).includes('Group');
+  const embarrassed = sweeps.Shrunk.filter(en => en.role === 'best' && en.teamId && eliminated[en.teamId] === 'Group');
+  if (embarrassed.length) {
+    embarrassed.forEach(en => {
+      add(en.member, -2);
+      items.push({ label: 'Group-stage embarrassment −2', text: en.member + ' — ' + teamName(en.teamId), neg: true });
+    });
+  } else {
+    items.push({ label: 'Group-stage embarrassment −2',
+      text: groupsDone ? 'no Best pick went out in the groups' : 'decided after the group stage', pending: !groupsDone });
+  }
+
+  // ----- Group-stage novelty awards -----
+  const allTeamIds = Object.keys(teamIndex);
+  const groupStageOver = allTeamIds.length >= 48 && allTeamIds.every(id => Number(teamIndex[id].gp) >= 3);
+  const groupAward = (label, list, pts, describe, noneText) => {
+    if (list.length) {
+      list.forEach(en => { add(en.member, pts); items.push({ label, text: describe(en), neg: pts < 0 || undefined }); });
+    } else {
+      items.push({ label, text: groupStageOver ? noneText : 'decided after the group stage', pending: !groupStageOver });
+    }
+  };
+
+  // Perfect group +2 — won all three group games
+  groupAward('Perfect group +2',
+    sweeps.Shrunk.filter(en => { const t = teamIndex[en.teamId]; return t && Number(t.gp) >= 3 && Number(t.w) === 3; }),
+    2, en => en.member + ' — ' + teamName(en.teamId) + ' won all three group games',
+    'no team won all three group games');
+
+  // Pointless −3 — single winner: the worst of the teams that lost all three
+  // group games (ties: worst GD, fewest goals scored, worst FIFA rank)
+  const pointless = sweeps.Shrunk.filter(en => { const t = teamIndex[en.teamId]; return t && Number(t.gp) >= 3 && Number(t.l) === 3; });
+  if (pointless.length) {
+    const pEn = pointless.slice().sort((a, b) => {
+      const ta = teamIndex[a.teamId], tb = teamIndex[b.teamId];
+      return (Number(ta.gd) || 0) - (Number(tb.gd) || 0) ||
+             (Number(ta.gf) || 0) - (Number(tb.gf) || 0) ||
+             (shrunkRank(b.teamId) || 0) - (shrunkRank(a.teamId) || 0) ||
+             a.member.localeCompare(b.member);
+    })[0];
+    add(pEn.member, -3);
+    items.push({ label: 'Pointless −3', text: pEn.member + ' — ' + teamName(pEn.teamId) + ' lost all three group games', neg: true });
+  } else {
+    items.push({ label: 'Pointless −3', text: groupStageOver ? 'no team lost all three group games' : 'decided after the group stage', pending: !groupStageOver });
+  }
+
+  // Group toppers +1 each — finished first in the group
+  groupAward('Group topper +1',
+    sweeps.Shrunk.filter(en => { const t = teamIndex[en.teamId]; return t && Number(t.gp) >= 3 && Number(t.rank) === 1; }),
+    1, en => en.member + ' — ' + teamName(en.teamId) + ' topped Group ' + (teamIndex[en.teamId].group || '?'),
+    'no group winners');
+
+  // Escape artist +1 — advanced as one of the eight best third-placed teams
+  groupAward('Escape artist +1',
+    groupStageOver ? sweeps.Shrunk.filter(en => { const t = teamIndex[en.teamId];
+      return t && Number(t.rank) === 3 && eliminated[en.teamId] !== 'Group'; }) : [],
+    1, en => en.member + ' — ' + teamName(en.teamId) + ' squeezed through in third',
+    'no team of yours advanced in third place');
+
+  // Full house +5 — every Best pick reached the knockouts
+  if (groupStageOver) {
+    const bestByMember = {};
+    sweeps.Shrunk.forEach(en => { if (en.role === 'best') (bestByMember[en.member] = bestByMember[en.member] || []).push(en); });
+    const fullHouse = Object.keys(bestByMember)
+      .filter(k => bestByMember[k].every(en => en.teamId && eliminated[en.teamId] !== 'Group'));
+    if (fullHouse.length) {
+      // Single winner — ties broken by the Best picks' combined group points, then GD
+      const fhPts = k => bestByMember[k].reduce((n, en) => n + (Number(teamIndex[en.teamId]?.pts) || 0), 0);
+      const fhGd = k => bestByMember[k].reduce((n, en) => n + (Number(teamIndex[en.teamId]?.gd) || 0), 0);
+      const fhK = fullHouse.sort((a, b) => fhPts(b) - fhPts(a) || fhGd(b) - fhGd(a) || a.localeCompare(b))[0];
+      add(fhK, 5);
+      items.push({ label: 'Full house +5', text: fhK + ' — all Best picks reached the knockouts' +
+        (fullHouse.length > 1 ? ' (won the tie on group points)' : '') });
+    } else {
+      items.push({ label: 'Full house +5', text: 'no player got every Best pick through the groups' });
+    }
+  } else {
+    items.push({ label: 'Full house +5', text: 'decided after the group stage', pending: true });
+  }
+
+  // Dud double +5 — two or more Duds reached the knockouts
+  if (groupStageOver) {
+    const dudThrough = {};
+    sweeps.Shrunk.forEach(en => {
+      if (en.role === 'dud' && en.teamId && eliminated[en.teamId] !== 'Group') (dudThrough[en.member] = dudThrough[en.member] || []).push(en);
+    });
+    const doubles = Object.keys(dudThrough).filter(k => dudThrough[k].length >= 2);
+    if (doubles.length) {
+      // Single winner — most Duds through; ties broken by those Duds' combined group points
+      const ddPts = k => dudThrough[k].reduce((n, en) => n + (Number(teamIndex[en.teamId]?.pts) || 0), 0);
+      const ddK = doubles.sort((a, b) =>
+        dudThrough[b].length - dudThrough[a].length || ddPts(b) - ddPts(a) || a.localeCompare(b))[0];
+      add(ddK, 5);
+      items.push({ label: 'Dud double +5', text: ddK + ' — ' + dudThrough[ddK].length + ' Duds reached the knockouts' });
+    } else {
+      items.push({ label: 'Dud double +5', text: 'no player got two Duds through the groups' });
+    }
+  } else {
+    items.push({ label: 'Dud double +5', text: 'decided after the group stage', pending: true });
+  }
+
+  // ----- Goal-based awards -----
+  // Golden boots +5 / Leaky bucket −7 — most goals scored / conceded per game
+  const attTotals = {};   // member -> { gf, ga, games }
+  sweeps.Shrunk.forEach(en => {
+    const t = (attTotals[en.member] = attTotals[en.member] || { gf: 0, ga: 0, games: 0 });
+    t.gf += (Number(teamIndex[en.teamId]?.gf) || 0) + (koGf[en.teamId] || 0);
+    t.ga += (Number(teamIndex[en.teamId]?.ga) || 0) + (koGa[en.teamId] || 0);
+    t.games += sweepGames(en);
+  });
+  const attNames = Object.keys(attTotals).filter(k => attTotals[k].games > 0);
+  if (attNames.length) {
+    const gfRate = k => attTotals[k].gf / attTotals[k].games;
+    const gaRate = k => attTotals[k].ga / attTotals[k].games;
+    const bestGf = Math.max(...attNames.map(gfRate));
+    const worstGa = Math.max(...attNames.map(gaRate));
+    attNames.filter(k => Math.abs(gfRate(k) - bestGf) < 1e-9).forEach(k => {
+      add(k, 5);
+      items.push({ label: 'Golden boots +5', text: k + ' — ' + gfRate(k).toFixed(2) + ' goals scored per game (' + attTotals[k].gf + ' in ' + attTotals[k].games + ')', prelim });
+    });
+    attNames.filter(k => Math.abs(gaRate(k) - worstGa) < 1e-9).forEach(k => {
+      add(k, -7);
+      items.push({ label: 'Leaky bucket −7', text: k + ' — ' + gaRate(k).toFixed(2) + ' goals conceded per game (' + attTotals[k].ga + ' in ' + attTotals[k].games + ')', prelim, neg: true });
+    });
+  } else {
+    items.push({ label: 'Golden boots +5', text: 'no games played yet', pending: true });
+    items.push({ label: 'Leaky bucket −7', text: 'no games played yet', pending: true });
+  }
+
+  // Demolition job +7 / Steamrolled −7 — biggest winning margin of the tournament
+  let blowouts = [], bigMargin = 0;
+  matchResults.forEach(m => {
+    const mg = m.margin || 0;
+    if (mg > bigMargin) { blowouts = [m]; bigMargin = mg; }
+    else if (mg === bigMargin && mg > 0) blowouts.push(m);
+  });
+  if (bigMargin > 0) {
+    // Single match — ties broken by more total goals, then the earlier game
+    const bm = blowouts.sort((a, b) =>
+      (b.goals || 0) - (a.goals || 0) || new Date(a.date) - new Date(b.date))[0];
+    const wEn = shrunkEntryByTeam(bm.winnerId), lEn = shrunkEntryByTeam(bm.loserId);
+    if (wEn) {
+      add(wEn.member, 7);
+      items.push({ label: 'Demolition job +7', text: wEn.member + ' — ' + teamName(bm.winnerId) + ' won by ' + bigMargin + ' v ' + teamName(bm.loserId), prelim });
+    }
+    if (lEn) {
+      add(lEn.member, -7);
+      items.push({ label: 'Steamrolled −7', text: lEn.member + ' — ' + teamName(bm.loserId) + ' lost by ' + bigMargin + ' v ' + teamName(bm.winnerId), prelim, neg: true });
+    }
+  } else {
+    items.push({ label: 'Demolition job +7', text: 'no decided matches yet', pending: true });
+    items.push({ label: 'Steamrolled −7', text: 'no decided matches yet', pending: true });
+  }
+
+  // Snoozefest −7 — every goalless draw, both owners cop it
+  // Single winner: the player with the most goalless draws cops a flat −7
+  // (ties: first to reach the count, then alphabetical)
+  const nilNils = {};
+  teamGameLog.forEach(g => {
+    if (g.res !== 'D' || g.g !== 0) return;
+    const en = shrunkEntryByTeam(g.id);
+    if (en) (nilNils[en.member] = nilNils[en.member] || []).push(new Date(g.date).getTime());
+  });
+  const nnNames = Object.keys(nilNils);
+  if (nnNames.length) {
+    const lastNn = k => Math.max(...nilNils[k]);
+    const nnK = nnNames.sort((a, b) =>
+      nilNils[b].length - nilNils[a].length || lastNn(a) - lastNn(b) || a.localeCompare(b))[0];
+    add(nnK, -7);
+    items.push({ label: 'Snoozefest −7', text: nnK + ' — ' +
+      nilNils[nnK].length + (nilNils[nnK].length === 1 ? ' goalless draw' : ' goalless draws'), prelim, neg: true });
+  } else {
+    items.push({ label: 'Snoozefest −7', text: 'no goalless draws yet', pending: true });
+  }
+
+  // ----- Streaks & stamina -----
+  // The marathon +3 — most total games played by a player's teams
+  if (gdNames.length) {
+    const mostGames = Math.max(...gdNames.map(k => gdTotals[k].games));
+    gdNames.filter(k => gdTotals[k].games === mostGames).forEach(k => {
+      add(k, 3);
+      items.push({ label: 'The marathon +3', text: k + ' — ' + mostGames + ' games played', prelim });
+    });
+  } else {
+    items.push({ label: 'The marathon +3', text: 'no games played yet', pending: true });
+  }
+
+  // Unbeaten run +5 — longest unbeaten streak by a single team
+  const byTeamLog = {};
+  teamGameLog.slice().sort((a, b) => new Date(a.date) - new Date(b.date))
+    .forEach(g => (byTeamLog[g.id] = byTeamLog[g.id] || []).push(g));
+  const streakOf = id => {
+    let cur = 0, best = 0;
+    (byTeamLog[id] || []).forEach(g => { if (g.res === 'L') cur = 0; else { cur++; if (cur > best) best = cur; } });
+    return best;
+  };
+  const streakers = sweeps.Shrunk.filter(en => en.teamId && streakOf(en.teamId) > 0);
+  if (streakers.length) {
+    const longest = Math.max(...streakers.map(en => streakOf(en.teamId)));
+    streakers.filter(en => streakOf(en.teamId) === longest).forEach(en => {
+      add(en.member, 5);
+      items.push({ label: 'Unbeaten run +5', text: en.member + ' — ' + teamName(en.teamId) + ', ' + longest + ' games unbeaten', prelim });
+    });
+  } else {
+    items.push({ label: 'Unbeaten run +5', text: 'no unbeaten games yet', pending: true });
+  }
+
+  return { byMember, items };
+}
+
 function sweepRow(league, en, idx) {
   const t = teamIndex[en.teamId] || { name: en.teamName || en.teamId, logo: '', group: '', gp: '', w: '', d: '', l: '', pts: '' };
   const role = en.role || 'best';
@@ -2647,6 +3217,74 @@ function teamOptions() {
     .join('');
 }
 
+/* Shrunk awards & points system panel — collapsed by default */
+let shrunkRulesOpen = store.get('wc26.shrunkRulesOpen', false);
+/* Shrunk "awards won" panel — also collapsed by default */
+let shrunkAwardsOpen = store.get('wc26.shrunkAwardsOpen', false);
+function shrunkRulesHtml() {
+  const row = (pts, text) =>
+    '<div class="rules-row"><span class="rules-pts' + (pts.charAt(0) === '−' ? ' neg' : '') + '">' + pts + '</span> ' + text + '</div>';
+  const group = (title, rows) => '<div><div class="rules-group-title">' + title + '</div>' + rows.join('') + '</div>';
+  const body = !shrunkRulesOpen ? '' : '<div class="rules-body">' +
+    group('Match points — every game, groups &amp; knockouts', [
+      row('+2', 'per win'),
+      row('+1', 'per draw'),
+      row('−1', 'per loss')
+    ]) +
+    group('Finals awards', [
+      row('+10', '<b>World Cup winners</b> — owner of the champions'),
+      row('+5', '<b>Runners-up</b> — owner of the losing finalist'),
+      row('+10', '<b>Underdog run</b> — worst FIFA-ranked team to reach the final (rank = draw order, 1–48)'),
+      row('+3', '<b>Third-place consolation</b> — winner of the third-place play-off')
+    ]) +
+    group('Dud awards', [
+      row('+10', '<b>Top Dud</b> — the Dud pick with the most match points (tie-break: knockout wins)'),
+      row('+5', '<b>Last Dud standing</b> — owner of the final Dud left alive'),
+      row('+5', '<b>Giant killer</b> — each time one of your Duds beats a top-10 team (repeatable)')
+    ]) +
+    group('Chaos awards', [
+      row('+3', '<b>Shootout specialist</b> — the player with the most shootout wins banks +3 per win'),
+      row('+5', '<b>Biggest upset</b> — owner of the winning team in the result with the largest rank gap'),
+      row('+7', '<b>Highest-scoring match</b> — owner of the winning team in the biggest goal-fest')
+    ]) +
+    group('Group-stage awards', [
+      row('+2', '<b>Perfect group</b> — each team of yours that wins all three group games'),
+      row('−3', '<b>Pointless</b> — owner of the worst team to lose all three group games'),
+      row('+1', '<b>Group topper</b> — each team of yours that finishes first in its group'),
+      row('+1', '<b>Escape artist</b> — each team of yours advancing as a best third-placed side'),
+      row('+5', '<b>Full house</b> — all of your Best picks reach the knockouts'),
+      row('+5', '<b>Dud double</b> — two or more of your Duds reach the knockouts')
+    ]) +
+    group('Goals', [
+      row('+5', '<b>Golden boots</b> — most goals scored per game across your teams'),
+      row('−7', '<b>Leaky bucket</b> — most goals conceded per game'),
+      row('+7', '<b>Demolition job</b> — owner of the team that wins by the tournament\u2019s biggest margin'),
+      row('−7', '<b>Steamrolled</b> — owner of the team on the wrong end of it'),
+      row('−7', '<b>Snoozefest</b> — the player with the most goalless draws')
+    ]) +
+    group('Streaks &amp; stamina', [
+      row('+3', '<b>The marathon</b> — most total games played by your teams'),
+      row('+5', '<b>Unbeaten run</b> — owner of the team with the longest unbeaten streak')
+    ]) +
+    group('Goal difference', [
+      row('+10', '<b>Best GD per game</b> — total GD across all of your teams \u00f7 total games they played, so uneven team counts don\u2019t skew it'),
+      row('−5', '<b>Worst GD per game</b>')
+    ]) +
+    group('Penalties', [
+      row('−5', '<b>First top-10 team out</b> — owner of the first top-10 ranked team knocked out'),
+      row('−5', '<b>Favourite flop</b> — each top-5 team out before the quarter-finals'),
+      row('−2', '<b>Group-stage embarrassment</b> — each Best pick knocked out in the groups')
+    ]) +
+    '<div class="rules-note">Awards land on the leaderboard as soon as they are decided. Gold-tagged awards in the bonus list are preliminary and can change hands until the tournament is finalised. Dead heats are shared, except the single-winner awards — Pointless, Full house, Dud double, Snoozefest, Shootout specialist, Demolition job, Steamrolled and Biggest upset — where ties are broken on group points, goal difference, margins, or who set the mark first.</div>' +
+  '</div>';
+  return '<div class="rules-box">' +
+    '<button class="rules-toggle" data-panel="rules" aria-expanded="' + (shrunkRulesOpen ? 'true' : 'false') + '">' +
+      '<span>Awards &amp; points system</span>' +
+      '<span class="rules-caret">' + (shrunkRulesOpen ? '\u25be hide' : '\u25b8 show') + '</span>' +
+    '</button>' + body +
+  '</div>';
+}
+
 let currentSweepLeague = null;
 function renderSweeps(league) {
   if (league) currentSweepLeague = league;
@@ -2670,12 +3308,19 @@ function renderSweeps(league) {
         totals[k].teams += 1;
         if (!(en.teamId && eliminated[en.teamId])) totals[k].alive += 1;
       });
+      const bonuses = shrunkBonuses();
+      const awarded = bonuses.items.filter(it => !it.pending);
+      Object.keys(bonuses.byMember).forEach(k => {
+        totals[k] = totals[k] || { pts: 0, alive: 0, teams: 0, gp: 0 };
+      });
+      Object.keys(totals).forEach(k => { totals[k].bonus = bonuses.byMember[k] || 0; });
+      const totalPts = k => totals[k].pts + totals[k].bonus;
       const ranked = Object.keys(totals).sort((a, b) =>
-        totals[b].pts - totals[a].pts || a.localeCompare(b));
+        totalPts(b) - totalPts(a) || a.localeCompare(b));
       leaderboardHtml = '<div class="leaderboard">' +
         '<div class="leaderboard-title">Leaderboard</div>' +
         '<table class="lb-table">' +
-          '<thead><tr><th>#</th><th>Member</th><th>Teams alive</th><th title="Total games played by this member&rsquo;s teams">GP</th><th>Pts</th></tr></thead>' +
+          '<thead><tr><th>#</th><th>Member</th><th>Teams alive</th><th title="Total games played by this member&rsquo;s teams">GP</th><th title="Total bonus points \u2014 the full list of bonus awards is below the table">Bonus</th><th>Pts</th></tr></thead>' +
           '<tbody>' + ranked.map((name, i) => {
             const t = totals[name];
             const cls = i === 0 ? ' class="lb-first"' : (i === ranked.length - 1 ? ' class="lb-last"' : '');
@@ -2684,10 +3329,28 @@ function renderSweeps(league) {
               '<td class="lb-member">' + esc(name) + '</td>' +
               '<td>' + t.alive + '/' + t.teams + '</td>' +
               '<td>' + t.gp + '</td>' +
-              '<td class="lb-pts">' + t.pts + '</td>' +
+              '<td class="lb-bonus-cell' + (t.bonus > 0 ? ' pos' : (t.bonus < 0 ? ' neg' : '')) + '">' +
+                (t.bonus ? (t.bonus > 0 ? '+' + t.bonus : '\u2212' + Math.abs(t.bonus)) : '\u2014') + '</td>' +
+              '<td class="lb-pts">' + (t.pts + t.bonus) + '</td>' +
             '</tr>';
           }).join('') + '</tbody>' +
         '</table>' +
+        (awarded.length
+          ? '<div class="rules-box">' +
+              '<button class="rules-toggle" data-panel="awards" aria-expanded="' + (shrunkAwardsOpen ? 'true' : 'false') + '">' +
+                '<span>Awards won \u00b7 ' + awarded.length + '</span>' +
+                '<span class="rules-caret">' + (shrunkAwardsOpen ? '\u25be hide' : '\u25b8 show') + '</span>' +
+              '</button>' +
+              (shrunkAwardsOpen
+                ? '<div class="rules-body"><div class="lb-bonuses" style="margin-top:0">' + awarded.map(it =>
+                    '<div class="lb-bonus">' +
+                      '<span class="lb-bonus-label' + (it.neg ? ' neg' : '') + '">' + esc(it.label) + ':</span> ' + esc(it.text) +
+                      (it.prelim ? ' <span class="lb-prelim-tag">preliminary — finalised after the final</span>' : '') +
+                    '</div>').join('') +
+                  '</div></div>'
+                : '') +
+            '</div>'
+          : '') +
       '</div>';
     }
     const rows = entries.map((en, i) => sweepRow(league, en, i)).join('');
@@ -2700,6 +3363,7 @@ function renderSweeps(league) {
           ? '<button class="charter-btn" style="margin-left:auto;background:none;cursor:pointer;color:var(--gold);font-family:Barlow,sans-serif;font-size:13px;letter-spacing:0.02em;text-transform:none;font-weight:500;border:1px solid rgba(232,184,75,0.45);border-radius:6px;padding:3px 10px">Competition Charter</button>'
           : '') +
       '</div>' +
+      (league === 'Shrunk' ? shrunkRulesHtml() : '') +
       leaderboardHtml +
       (entries.length
         ? '<table class="sweep-table">' +
@@ -2707,10 +3371,7 @@ function renderSweeps(league) {
             (league === 'Shrunk' ? '<th title="Win +2, draw +1, loss \u22121">Pts</th>' : '') +
             '<th>Status</th>' +
             (locked ? '' : '<th></th>') + '</tr></thead>' +
-            '<tbody>' + rows + '</tbody></table>' +
-          (league === 'Shrunk'
-            ? '<div class="sweep-empty" style="padding-top:10px">Scoring: win +2 points, draw +1 point, loss \u22121 point. Ranked highest to lowest.</div>'
-            : '')
+            '<tbody>' + rows + '</tbody></table>'
         : '<div class="sweep-empty">No members yet — add the sweep draw below.</div>') +
       (locked ? '' :
         '<div class="sweep-add">' +
@@ -2791,6 +3452,18 @@ document.addEventListener('keydown', (e) => {
 });
 
 sweepsMain.addEventListener('click', (e) => {
+  const rulesToggle = e.target.closest('.rules-toggle');
+  if (rulesToggle) {
+    if (rulesToggle.dataset.panel === 'awards') {
+      shrunkAwardsOpen = !shrunkAwardsOpen;
+      store.set('wc26.shrunkAwardsOpen', shrunkAwardsOpen);
+    } else {
+      shrunkRulesOpen = !shrunkRulesOpen;
+      store.set('wc26.shrunkRulesOpen', shrunkRulesOpen);
+    }
+    renderSweeps();
+    return;
+  }
   const charter = e.target.closest('.charter-btn');
   if (charter) { openCharter(); return; }
   const add = e.target.closest('.sweep-add-btn');
@@ -3396,12 +4069,9 @@ const POLL_GAME_LIMIT = 16;   // how many upcoming fixtures to open polls for
 let votes = store.get('wc26.votes', {});            // { pollId: { voter: choice } }
 let voterName = store.get('wc26.voterName', '');
 if (!votes || typeof votes !== 'object') votes = {};
-/* Your own picks awaiting server confirmation: key "poll voter" -> {choice}.
-   Persisted and kept until the sheet echoes the same value back, so your own
-   tips never vanish from your screen even if the sheet is slow to store them. */
-let pendingVotes = store.get('wc26.pendingVotes', {});
-if (!pendingVotes || typeof pendingVotes !== 'object') pendingVotes = {};
-let voteConfirmTimer = null;   // quick re-check after a vote to catch a dropped write
+/* Local picks awaiting server confirmation: key "poll\0voter" -> {choice, ts}.
+   Stops a stale (not-yet-synced) server read from reverting a just-made pick. */
+let pendingVotes = {};
 
 function teamNameList() {
   const ids = Object.keys(teamIndex);
@@ -3424,18 +4094,14 @@ async function loadVotes() {
       votes = data.votes || data;
       // Overlay recent local picks the server hasn't echoed back yet, so a
       // just-changed tip isn't reverted; drop each once confirmed (or after 60s).
+      const now = Date.now();
       Object.keys(pendingVotes).forEach(k => {
-        const { choice } = pendingVotes[k];
+        const { choice, ts } = pendingVotes[k];
         const i = k.indexOf(' ');
         const poll = k.slice(0, i), voter = k.slice(i + 1);
-        if ((votes[poll] || {})[voter] === choice) { delete pendingVotes[k]; return; }
-        (votes[poll] = votes[poll] || {})[voter] = choice;   // keep your own pick visible until the sheet confirms it
-        // Fire-and-forget POSTs can silently drop; re-send an unconfirmed write
-        // (bounded) so a change can't get stuck showing locally but missing server-side.
-        pendingVotes[k].tries = (pendingVotes[k].tries || 0) + 1;
-        if (pendingVotes[k].tries <= 5) pushPrediction({ type: 'vote', poll: poll, voter: voter, choice: choice });
+        if ((votes[poll] || {})[voter] === choice || now - ts > 60000) { delete pendingVotes[k]; return; }
+        (votes[poll] = votes[poll] || {})[voter] = choice;
       });
-      store.set('wc26.pendingVotes', pendingVotes);
       store.set('wc26.votes', votes);
       // Don't rebuild the poll list while someone is typing in a score box.
       const ae = document.activeElement;
@@ -3446,15 +4112,10 @@ async function loadVotes() {
 function castVote(poll, voter, choice) {
   votes[poll] = votes[poll] || {};
   votes[poll][voter] = choice;
-  pendingVotes[poll + ' ' + voter] = { choice: choice };
-  store.set('wc26.pendingVotes', pendingVotes);
+  pendingVotes[poll + ' ' + voter] = { choice: choice, ts: Date.now() };
   store.set('wc26.votes', votes);
   pushPrediction({ type: 'vote', poll: poll, voter: voter, choice: choice });
   renderPolls();
-  // Re-check soon so a dropped write is caught and re-sent without waiting for
-  // the full refresh cycle.
-  clearTimeout(voteConfirmTimer);
-  voteConfirmTimer = setTimeout(loadVotes, 4000);
 }
 
 function pollTally(v) {
@@ -3526,9 +4187,9 @@ function gamePolls() {
     const a = cs.find(c => c.homeAway === 'away') || cs[1];
     const state = comp.status?.type?.state;
     const ko = (ev.season?.slug || '') !== 'group-stage';
-    const opts = [{ value: h.team.displayName, label: h.team.shortDisplayName || h.team.displayName, logo: h.team.logo || '', abbr: h.team.abbreviation || h.team.shortDisplayName || h.team.displayName }];
+    const opts = [{ value: h.team.displayName, label: h.team.shortDisplayName || h.team.displayName, logo: h.team.logo || '' }];
     if (!ko) opts.push({ value: 'Draw', label: 'Draw', logo: '' });
-    opts.push({ value: a.team.displayName, label: a.team.shortDisplayName || a.team.displayName, logo: a.team.logo || '', abbr: a.team.abbreviation || a.team.shortDisplayName || a.team.displayName });
+    opts.push({ value: a.team.displayName, label: a.team.shortDisplayName || a.team.displayName, logo: a.team.logo || '' });
     return {
       id: 'game:' + ev.id,
       title: h.team.displayName + ' v ' + a.team.displayName,
@@ -3564,7 +4225,7 @@ function scoreSectionHtml(p, voter) {
   const homeOpt = p.options[0], awayOpt = p.options[p.options.length - 1];
   const teamTag = (o) => '<span class="score-team">' +
     (o && o.logo ? '<img class="score-flag" src="' + esc(o.logo) + '" alt="" loading="lazy">' : '') +
-    esc(o ? (o.abbr || o.label) : '') + '</span>';   // 3-letter code keeps the row on one line
+    esc(o ? o.label : '') + '</span>';
   let note = '';
   if (p.ko && ps && ps[0] === ps[1]) {
     const adv = voter ? (votes[p.id] || {})[voter] : null;
@@ -3572,8 +4233,8 @@ function scoreSectionHtml(p, voter) {
     note = '<div class="poll-score-note">Level after 90\u2032 \u2014 extra time / penalties; advances: <strong>' +
       esc(advOk ? adv : 'pick a winner above') + '</strong></div>';
   }
-  return '<div class="poll-score-cap">' + (p.locked ? 'Predicted score' : 'Tip the score') + '</div>' +
-    '<div class="poll-score">' +
+  return '<div class="poll-score">' +
+      '<span class="score-lead">' + (p.locked ? 'Predicted score:' : 'Tip the score:') + '</span>' +
       '<span class="score-side">' + teamTag(homeOpt) +
         '<input type="number" min="0" class="pred-in score-in" data-poll="' + esc(p.id) + '" data-side="h" value="' + esc(hv) + '"' + dis + '></span>' +
       '<span class="score-dash">\u2013</span>' +
