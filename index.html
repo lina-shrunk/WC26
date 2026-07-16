@@ -776,6 +776,14 @@
   .pred-name { min-width: 130px; font-weight: 600; }
   .pred-team { color: var(--muted); font-size: 12px; font-weight: 400; }
   .pred-correct { color: var(--pitch); font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12px; }
+  .pred-flag { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; flex-shrink: 0; }
+  .pred-actual strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .pred-actual-btn {
+    background: rgba(232,184,75,0.14); border: 1px solid var(--gold); color: var(--gold);
+    border-radius: 7px; padding: 4px 10px; font-family: inherit; font-size: 12px; cursor: pointer; margin-left: 4px;
+  }
+  .pred-actual-btn:hover { background: rgba(232,184,75,0.24); }
+  .pred-actual-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .pred-in {
     width: 44px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
     color: var(--text); font-family: inherit; font-size: 14px; padding: 5px 6px; text-align: center;
@@ -4504,12 +4512,11 @@ function finalFixture() {
     as: state === 'post' ? Number(a.score) : null };
 }
 function finalActual() {
+  // The real final result straight from the feed — no manual entry. Tips are
+  // judged against whatever the final actually finished (incl. any extra time).
   const f = finalFixture();
-  if (!f) return null;
-  const h = finalPreds.actualH != null ? finalPreds.actualH : f.hs;
-  const a = finalPreds.actualA != null ? finalPreds.actualA : f.as;
-  if (h == null || a == null) return null;
-  return { h: Number(h), a: Number(a) };
+  if (!f || f.hs == null || f.as == null) return null;
+  return { h: Number(f.hs), a: Number(f.as) };
 }
 /* Once the final has kicked off (or finished) the winner is effectively being
    decided, so champion-poll votes and final-score tips are locked. */
@@ -4565,21 +4572,22 @@ function renderFinalPredictions() {
   const regs = f ? sharedFinalRegistrants() : [];
   if (!f || !regs.length) { el.innerHTML = ''; return; }   // nothing to tip on
   const hName = f.h.team?.displayName || 'Home', aName = f.a.team?.displayName || 'Away';
-  const actH = finalPreds.actualH != null ? finalPreds.actualH : (f.hs != null ? f.hs : '');
-  const actA = finalPreds.actualA != null ? finalPreds.actualA : (f.as != null ? f.as : '');
-  const autoNote = (f.state === 'post' && finalPreds.actualH == null && finalPreds.actualA == null)
-    ? ' <span class="pred-auto">(from result — edit if it went to extra time)</span>' : '';
   const locked = finalLocked();
+  // Finalist flags to sit beside each score box, so it's clear which team is which.
+  const fH = f.h.team?.logo ? '<img class="pred-flag" src="' + esc(f.h.team.logo) + '" alt="" loading="lazy">' : '';
+  const fA = f.a.team?.logo ? '<img class="pred-flag" src="' + esc(f.a.team.logo) + '" alt="" loading="lazy">' : '';
+  const actualNow = finalActual();   // {h,a} from the result (or a manual override), or null if not played yet
   el.innerHTML =
     '<div class="pred-panel">' +
       '<div class="pred-title">Final score predictions</div>' +
       '<div class="pred-sub">' + esc(hName) + ' vs ' + esc(aName) + ' — ' + fmtDay(f.date) +
-        '. Shared-Team finalists are won by whichever registrant tips the exact 90-minute score; if neither does, the prize is split. Enter predictions before kickoff. ' +
+        '. Shared-Team finalists are won by whichever registrant tips the exact final score; if neither does, the prize is split. Enter predictions before kickoff. ' +
         (PREDICTIONS_WEBAPP_URL ? '<span class="pred-auto">Shared live via Google Sheet.</span>' : '<span class="pred-auto">Saved on this device only.</span>') + '</div>' +
       (locked ? '<div class="poll-closed">Tips locked — the final has kicked off.</div>' : '') +
-      '<div class="pred-actual">Actual 90\u2019 score: ' +
-        '<input type="number" min="0" class="pred-in" data-k="actualH" value="' + esc(actH) + '"> \u2013 ' +
-        '<input type="number" min="0" class="pred-in" data-k="actualA" value="' + esc(actA) + '">' + autoNote +
+      '<div class="pred-actual">Final result: ' +
+        (actualNow
+          ? fH + '<strong>' + actualNow.h + '</strong> \u2013 <strong>' + actualNow.a + '</strong>' + fA
+          : '<span class="pred-auto">shows here once the final is played</span>') +
       '</div>' +
       '<div class="pred-list">' + regs.map(r => {
         const p = finalPreds.preds[r.member] || {};
@@ -4589,8 +4597,8 @@ function renderFinalPredictions() {
         return '<div class="pred-row">' +
           '<span class="pred-name">' + esc(r.member) +
             ' <span class="pred-team">' + esc(r.teamName) + ' ' + (r.role === 'dud' ? 'Sh*t' : 'Golden') + '</span></span>' +
-          '<input type="number" min="0" class="pred-in" data-pred="' + esc(r.member) + '" data-side="h" value="' + esc(p.h ?? '') + '"' + (locked ? ' disabled' : '') + '> \u2013 ' +
-          '<input type="number" min="0" class="pred-in" data-pred="' + esc(r.member) + '" data-side="a" value="' + esc(p.a ?? '') + '"' + (locked ? ' disabled' : '') + '>' +
+          fH + '<input type="number" min="0" class="pred-in" data-pred="' + esc(r.member) + '" data-side="h" value="' + esc(p.h ?? '') + '"' + (locked ? ' disabled' : '') + '> \u2013 ' +
+          '<input type="number" min="0" class="pred-in" data-pred="' + esc(r.member) + '" data-side="a" value="' + esc(p.a ?? '') + '"' + (locked ? ' disabled' : '') + '>' + fA +
           (correct ? ' <span class="pred-correct">\u2713 correct</span>' : '') +
         '</div>';
       }).join('') + '</div>' +
